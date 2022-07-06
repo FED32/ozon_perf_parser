@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# https://docs.ozon.ru/api/performance/
-# 
-# https://requests.readthedocs.io/en/latest/
-# 
-# https://en.wikipedia.org/wiki/List_of_file_signatures
-
-# In[1]:
 
 
 import requests
@@ -16,9 +9,10 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import date
 import time
+import os
 
 
-# In[110]:
+# In[155]:
 
 
 class Ozon_performance:
@@ -41,9 +35,9 @@ class Ozon_performance:
         except:
             print('Нет доступа к серверу')
         
-        self.date_to = str(date.today())
+#         self.date_to = str(date.today())
 #         self.date_to = '2022-06-28'
-        self.date_from = '2022-07-01' 
+#         self.date_from = '2022-07-01' 
         try:
             self.campaigns = [camp['id'] for camp in self.get_campaigns()]
             self.objects = {}
@@ -143,7 +137,7 @@ class Ozon_performance:
                        t_date_from = None,
                        t_date_to= None,
                        group_by = "DATE",
-                       n_attempts = 10,
+                       n_attempts = 5,
                        delay = 3):
         """
         Возвращает статистику по кампании
@@ -193,7 +187,7 @@ class Ozon_performance:
                     t_date_from = None,
                     t_date_to= None,
                     group_by = "DATE",
-                    n_attempts = 10,
+                    n_attempts = 5,
                     delay = 3):
         """
         Возвращает отчет по фразам
@@ -236,7 +230,7 @@ class Ozon_performance:
                         t_date_from = None,
                         t_date_to= None,
                         group_by = "DATE",
-                        n_attempts = 10,
+                        n_attempts = 5,
                         delay = 3):
         """
         Возвращает отчёт по заказам
@@ -374,11 +368,14 @@ class Ozon_performance:
         else:
             print(response.text)
     
-    def collect_data(self, methods = {'statistics': True, 'phrases': True, 'attribution': True, 
+    def collect_data(self, date_from, date_to,
+                     methods = {'statistics': True, 'phrases': True, 'attribution': True, 
                                       'media': True,'product': True, 'daily': True}):
         data = self.split_data(camp_lim = self.camp_lim)
-        time = self.split_time(date_from = self.date_from, date_to = self.date_to, day_lim = self.day_lim)
+        time = self.split_time(date_from = date_from, date_to = date_to, day_lim = self.day_lim)
         self.time = time
+        self.date_from = date_from
+        self.date_to = date_to
         if methods['statistics'] is True:
             self.st_camp = []
         if methods['phrases'] is True:
@@ -386,11 +383,11 @@ class Ozon_performance:
         if methods['attribution'] is True:
             self.st_attr = []
         if methods['media'] is True:
-            self.st_med = self.get_media(self.campaigns, t_date_from=self.date_from, t_date_to=self.date_to)
+            self.st_med = self.get_media(self.campaigns, t_date_from=date_from, t_date_to=date_to)
         if methods['product'] is True:
-            self.st_pr = self.get_product(self.campaigns, t_date_from=self.date_from, t_date_to=self.date_to)
+            self.st_pr = self.get_product(self.campaigns, t_date_from=date_from, t_date_to=date_to)
         if methods['daily'] is True:
-            self.st_dai = self.get_daily(self.campaigns, t_date_from=self.date_from, t_date_to=self.date_to)
+            self.st_dai = self.get_daily(self.campaigns, t_date_from=date_from, t_date_to=date_to)
         try:
             for d in data:
                 for t in time:
@@ -407,24 +404,32 @@ class Ozon_performance:
                   methods = {'statistics': True, 'phrases': True, 'attribution': True, 
                              'media': True,'product': True, 'daily': True}):
         if methods['media'] is True:
-            name = path + f"{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(path + 'media'):
+                os.mkdir(path + 'media')
+            name = path + r'media/' + f"{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_med.content)
             file.close()
             print('Сохранен', name)
         if methods['product'] is True:
-            name = path + f"{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(path + 'product'):
+                os.mkdir(path + 'product')
+            name = path + r'product/' + f"{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_pr.content)
             file.close()
             print('Сохранен', name)       
         if methods['daily'] is True:
-            name = path + f"{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(path + 'daily'):
+                os.mkdir(path + 'daily')
+            name = path + r'daily/' + f"{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_dai.content)
             file.close()
             print('Сохранен', name)
         if methods['statistics'] is True:
+            if not os.path.isdir(path + 'statistics'):
+                os.mkdir(path + 'statistics')
             for num, camp in enumerate(self.st_camp):
                 try:
                     status = ''
@@ -433,7 +438,7 @@ class Ozon_performance:
                         status = self.status_report(uuid=camp[0]).json()['state']
                         print(status) 
                     report = self.get_report(uuid=camp[0])
-                    name = path + f"{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
+                    name = path + r'statistics/' + f"{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
                     file.close()
@@ -441,6 +446,8 @@ class Ozon_performance:
                 except:
                     continue
         if methods['phrases'] is True:
+            if not os.path.isdir(path + 'phrases'):
+                os.mkdir(path + 'phrases')
             for num, ph in enumerate(self.st_ph):
                 try:
                     for n_camp, phrases in enumerate(ph):
@@ -451,7 +458,7 @@ class Ozon_performance:
                                 status = self.status_report(uuid=phrases[0]).json()['state']
                                 print(status)
                             report = self.get_report(uuid=phrases[0])
-                            name = path + f"{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
+                            name = path + r'phrases/' + f"{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             file = open(name, 'wb')
                             file.write(report.content)
                             file.close()
@@ -461,6 +468,8 @@ class Ozon_performance:
                 except:
                     continue
         if methods['attribution'] is True:
+            if not os.path.isdir(path + 'attribution'):
+                os.mkdir(path + 'attribution')
             for num, attr in enumerate(self.st_attr):
                 try:
                     status = ''
@@ -469,7 +478,7 @@ class Ozon_performance:
                         status = self.status_report(uuid=phrases[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=attr[0])
-                    name = path + f"{self.client_id}_" + f"attr_{num}.{attr[1]}"
+                    name = path + r'attribution/' + f"{self.client_id}_" + f"attr_{num}.{attr[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
                     file.close()
