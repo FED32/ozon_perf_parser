@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-
-
 import requests
 import json
 from datetime import datetime
@@ -12,14 +7,13 @@ import time
 import os
 
 
-# In[155]:
-
 
 class Ozon_performance:
-    def __init__(self, client_id, client_secret,
+    def __init__(self, account_id, client_id, client_secret,
                  day_lim = 2,
                  camp_lim = 2):
         
+        self.account_id = account_id
         self.client_id = client_id
         self.client_secret = client_secret
         self.methods = {'statistics': 'https://performance.ozon.ru:443/api/client/statistics',
@@ -30,14 +24,14 @@ class Ozon_performance:
                         'daily': 'https://performance.ozon.ru:443/api/client/statistics/daily'}
         self.day_lim = day_lim
         self.camp_lim = camp_lim
+#         self.date_to = str(date.today())
+#         self.date_to = '2022-06-28'
+#         self.date_from = '2022-07-01'            
         try:
             self.auth = self.get_token()
         except:
             print('Нет доступа к серверу')
         
-#         self.date_to = str(date.today())
-#         self.date_to = '2022-06-28'
-#         self.date_from = '2022-07-01' 
         try:
             self.campaigns = [camp['id'] for camp in self.get_campaigns()]
             self.objects = {}
@@ -45,7 +39,7 @@ class Ozon_performance:
                 self.objects[camp]=[obj['id'] for obj in self.get_objects(campaign_id=camp)]
         except:
             print('Ошибка при получении кампаний')
-        
+
         self.st_camp = []
         self.st_ph = []
         self.st_attr = []
@@ -369,8 +363,8 @@ class Ozon_performance:
             print(response.text)
     
     def collect_data(self, date_from, date_to,
-                     methods = {'statistics': True, 'phrases': True, 'attribution': True, 
-                                      'media': True,'product': True, 'daily': True}):
+                     methods = {'statistics': False, 'phrases': False, 'attribution': False, 
+                                      'media': False,'product': False, 'daily': False}):
         data = self.split_data(camp_lim = self.camp_lim)
         time = self.split_time(date_from = date_from, date_to = date_to, day_lim = self.day_lim)
         self.time = time
@@ -401,35 +395,43 @@ class Ozon_performance:
             print('Нет ответа от сервера')
                 
     def save_data(self, path = r'./data/', 
-                  methods = {'statistics': True, 'phrases': True, 'attribution': True, 
-                             'media': True,'product': True, 'daily': True}):
+                  methods = {'statistics': False, 'phrases': False, 'attribution': False, 
+                             'media': False,'product': False, 'daily': False}):
+                             
+#         folder = path
+        folder = path + f'{self.account_id}-{self.client_id}/'
+        if not os.path.isdir(folder):
+                os.mkdir(folder)
         if methods['media'] is True:
-            if not os.path.isdir(path + 'media'):
-                os.mkdir(path + 'media')
-            name = path + r'media/' + f"{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(folder + 'media'):
+                os.mkdir(folder + 'media')
+#             name = folder + r'media/' + f"{self.account_id}-{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
+            name = folder + r'media/' + f"media_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_med.content)
             file.close()
             print('Сохранен', name)
         if methods['product'] is True:
-            if not os.path.isdir(path + 'product'):
-                os.mkdir(path + 'product')
-            name = path + r'product/' + f"{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(folder + 'product'):
+                os.mkdir(folder + 'product')
+#             name = folder + r'product/' + f"{self.account_id}-{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
+            name = folder + r'product/' + f"product_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_pr.content)
             file.close()
             print('Сохранен', name)       
         if methods['daily'] is True:
-            if not os.path.isdir(path + 'daily'):
-                os.mkdir(path + 'daily')
-            name = path + r'daily/' + f"{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
+            if not os.path.isdir(folder + 'daily'):
+                os.mkdir(folder + 'daily')
+#             name = folder + r'daily/' + f"{self.account_id}-{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
+            name = folder + r'daily/' +  f"daily_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_dai.content)
             file.close()
             print('Сохранен', name)
         if methods['statistics'] is True:
-            if not os.path.isdir(path + 'statistics'):
-                os.mkdir(path + 'statistics')
+            if not os.path.isdir(folder + 'statistics'):
+                os.mkdir(folder + 'statistics')
             for num, camp in enumerate(self.st_camp):
                 try:
                     status = ''
@@ -438,7 +440,8 @@ class Ozon_performance:
                         status = self.status_report(uuid=camp[0]).json()['state']
                         print(status) 
                     report = self.get_report(uuid=camp[0])
-                    name = path + r'statistics/' + f"{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
+#                     name = folder + r'statistics/' + f"{self.account_id}-{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
+                    name = folder + r'statistics/' + f"campaigns_{num}.{camp[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
                     file.close()
@@ -446,8 +449,8 @@ class Ozon_performance:
                 except:
                     continue
         if methods['phrases'] is True:
-            if not os.path.isdir(path + 'phrases'):
-                os.mkdir(path + 'phrases')
+            if not os.path.isdir(folder + 'phrases'):
+                os.mkdir(folder + 'phrases')
             for num, ph in enumerate(self.st_ph):
                 try:
                     for n_camp, phrases in enumerate(ph):
@@ -458,7 +461,8 @@ class Ozon_performance:
                                 status = self.status_report(uuid=phrases[0]).json()['state']
                                 print(status)
                             report = self.get_report(uuid=phrases[0])
-                            name = path + r'phrases/' + f"{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
+#                             name = folder + r'phrases/' + f"{self.account_id}-{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
+                            name = folder + r'phrases/' + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             file = open(name, 'wb')
                             file.write(report.content)
                             file.close()
@@ -468,8 +472,8 @@ class Ozon_performance:
                 except:
                     continue
         if methods['attribution'] is True:
-            if not os.path.isdir(path + 'attribution'):
-                os.mkdir(path + 'attribution')
+            if not os.path.isdir(folder + 'attribution'):
+                os.mkdir(folder + 'attribution')
             for num, attr in enumerate(self.st_attr):
                 try:
                     status = ''
@@ -478,12 +482,11 @@ class Ozon_performance:
                         status = self.status_report(uuid=phrases[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=attr[0])
-                    name = path + r'attribution/' + f"{self.client_id}_" + f"attr_{num}.{attr[1]}"
+#                     name = folder + r'attribution/' + f"{self.account_id}-{self.client_id}_" + f"attr_{num}.{attr[1]}"
+                    name = folder + r'attribution/' + f"attr_{num}.{attr[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
                     file.close()
                     print('Сохранен', name)
                 except:
                     continue                
-
-
