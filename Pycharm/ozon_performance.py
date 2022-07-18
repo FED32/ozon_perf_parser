@@ -2,7 +2,7 @@ import requests
 import json
 from datetime import datetime
 from datetime import timedelta
-from datetime import date
+# from datetime import date
 import time
 import os
 
@@ -11,18 +11,14 @@ import numpy as np
 import glob
 import zipfile
 import psycopg2
-
-from datetime import date
-from datetime import datetime
-from contextlib import closing
+from sqlalchemy import create_engine
+# from contextlib import closing
 
 
-
-class Ozon_performance:
+class OzonPerformance:
     def __init__(self, account_id, client_id, client_secret,
                  day_lim=2,
                  camp_lim=2):
-
         self.account_id = account_id
         self.client_id = client_id
         self.client_secret = client_secret
@@ -31,7 +27,8 @@ class Ozon_performance:
                         'attribution': 'https://performance.ozon.ru:443/api/client/statistics/attribution',
                         'media': 'https://performance.ozon.ru:443/api/client/statistics/campaign/media',
                         'product': 'https://performance.ozon.ru:443/api/client/statistics/campaign/product',
-                        'daily': 'https://performance.ozon.ru:443/api/client/statistics/daily'}
+                        'daily': 'https://performance.ozon.ru:443/api/client/statistics/daily',
+                        'traffic': 'https://performance.ozon.ru:443/api/client/vendors/statistics'}
         self.day_lim = day_lim
         self.camp_lim = camp_lim
         #         self.date_to = str(date.today())
@@ -276,9 +273,7 @@ class Ozon_performance:
 
     def get_media(self, campaigns,
                   t_date_from=None,
-                  t_date_to=None,
-                  n_attempts=10,
-                  delay=3):
+                  t_date_to=None):
         """
         Возвращает статистику по медийным кампаниям
         """
@@ -300,9 +295,7 @@ class Ozon_performance:
 
     def get_product(self, campaigns,
                     t_date_from=None,
-                    t_date_to=None,
-                    n_attempts=10,
-                    delay=3):
+                    t_date_to=None):
         """
         Возвращает статистику по продуктовым кампаниям
         """
@@ -323,9 +316,7 @@ class Ozon_performance:
 
     def get_daily(self, campaigns,
                   t_date_from=None,
-                  t_date_to=None,
-                  n_attempts=10,
-                  delay=3):
+                  t_date_to=None):
         """
         Возвращает дневную статистику по кампаниям
         """
@@ -340,6 +331,56 @@ class Ozon_performance:
         response = requests.get(url, headers=head, params=params)
         if response.status_code == 200:
             print('Статистика дневная получена')
+            return response
+        else:
+            print(response.text)
+
+    def get_traffic(self, t_date_from, t_date_to, type="TRAFFIC_SOURCES"):
+        """
+        Метод для запуска формирования отчёта с аналитикой внешнего трафика
+        TRAFFIC_SOURCES — отчёт по источникам трафика
+        ORDERS — отчёт по заказам
+        """
+        url = self.methods['traffic']
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"dateFrom": t_date_from,
+                "dateTo": t_date_to,
+                "type": type
+                }
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Аналитика трафика получена')
+            return response.json()['UUID']
+        else:
+            print(response.text)
+
+    def status_traffic(self, uuid):
+        """
+        Возвращает информацию об отчёте
+        """
+        url='https://performance.ozon.ru:443/api/client/vendors/statistics/' + uuid
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                # "Content-Type": "application/json",
+                # "Accept": "application/json"
+                }
+        params = {'vendor': 'true'}
+        response = requests.get(url, headers=head, params=params)
+        if response.status_code == 200:
+            return response
+        else:
+            print(response.text)
+
+    def get_tr_rep(self, uuid):
+        """
+        Получить файл отчета
+        """
+        url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/report?UUID=' + uuid
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token']}
+        response = requests.get(url, headers=head)
+        if response.status_code == 200:
             return response
         else:
             print(response.text)
@@ -413,7 +454,7 @@ class Ozon_performance:
         if methods['media'] is True:
             if not os.path.isdir(folder + 'media'):
                 os.mkdir(folder + 'media')
-            #             name = folder + r'media/' + f"{self.account_id}-{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
+#             name = folder + r'media/' + f"{self.account_id}-{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
             name = folder + r'media/' + f"media_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_med.content)
@@ -422,7 +463,7 @@ class Ozon_performance:
         if methods['product'] is True:
             if not os.path.isdir(folder + 'product'):
                 os.mkdir(folder + 'product')
-            #             name = folder + r'product/' + f"{self.account_id}-{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
+#             name = folder + r'product/' + f"{self.account_id}-{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
             name = folder + r'product/' + f"product_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_pr.content)
@@ -431,7 +472,7 @@ class Ozon_performance:
         if methods['daily'] is True:
             if not os.path.isdir(folder + 'daily'):
                 os.mkdir(folder + 'daily')
-            #             name = folder + r'daily/' + f"{self.account_id}-{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
+#             name = folder + r'daily/' + f"{self.account_id}-{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
             name = folder + r'daily/' + f"daily_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_dai.content)
@@ -448,7 +489,7 @@ class Ozon_performance:
                         status = self.status_report(uuid=camp[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=camp[0])
-                    #                     name = folder + r'statistics/' + f"{self.account_id}-{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
+#                     name = folder + r'statistics/' + f"{self.account_id}-{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
                     name = folder + r'statistics/' + f"campaigns_{num}.{camp[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
@@ -469,7 +510,7 @@ class Ozon_performance:
                                 status = self.status_report(uuid=phrases[0]).json()['state']
                                 print(status)
                             report = self.get_report(uuid=phrases[0])
-                            #                             name = folder + r'phrases/' + f"{self.account_id}-{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
+#                             name = folder + r'phrases/' + f"{self.account_id}-{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             name = folder + r'phrases/' + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             file = open(name, 'wb')
                             file.write(report.content)
@@ -487,10 +528,10 @@ class Ozon_performance:
                     status = ''
                     while status != 'OK':
                         time.sleep(1)
-                        status = self.status_report(uuid=phrases[0]).json()['state']
+                        status = self.status_report(uuid=attr[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=attr[0])
-                    #                     name = folder + r'attribution/' + f"{self.account_id}-{self.client_id}_" + f"attr_{num}.{attr[1]}"
+#                     name = folder + r'attribution/' + f"{self.account_id}-{self.client_id}_" + f"attr_{num}.{attr[1]}"
                     name = folder + r'attribution/' + f"attr_{num}.{attr[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
@@ -500,7 +541,7 @@ class Ozon_performance:
                     continue
 
 
-class db_working:
+class DbWorking:
     def __init__(self, db_access="""host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
                                     port=6432\
                                     sslmode=verify-full\
@@ -509,7 +550,6 @@ class db_working:
                                     password=Qazwsx123Qaz\
                                     target_session_attrs=read-write"""):
         self.db_access = db_access
-
         # необходимые запросы к БД
         self.api_keys_resp = 'SELECT * FROM account_list'
         self.keys_dt_cols_resp = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'account_list'"
@@ -523,6 +563,13 @@ class db_working:
                                     group by foo.client_id_performance, client_secret_performance\
                                     order by client_id_performance"
 
+    db_access = """host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
+                                       port=6432\
+                                       sslmode=verify-full\
+                                       dbname=market_db\
+                                       user=sfedyusnin\
+                                       password=Qazwsx123Qaz\
+                                       target_session_attrs=read-write"""
     #         self.db_data = self.get_analitics_data()
 
     def test_db_connection(self):
@@ -563,9 +610,9 @@ class db_working:
             print('Доступ к таблице запрещен')
 
     def get_perf_keys(self):
-        '''
+        """
         Загружает ключи performance
-        '''
+        """
         try:
             df = pd.read_sql(self.api_perf_keys_resp, psycopg2.connect(self.db_access))
             print('Загружены performance_api_keys')
@@ -573,7 +620,7 @@ class db_working:
         except:
             print('Доступ к таблице запрещен')
 
-    def extract_zips(self, path_, rem = False):
+    def extract_zips(self, path_, rem=False):
         """
         Распаковывает все zip в папках statistics папок аккаунтов
         """
@@ -672,3 +719,15 @@ class db_working:
             for file in csv_files:
                 os.remove(file)
                 print(f'Удаление {file}')
+
+    def upl_to_db(self, dataset,
+                  db_params='postgresql://sfedyusnin:Qazwsx123Qaz@rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net:6432/market_db',
+                  table_name='analitics_data2'):
+        """
+        Загружает данные в БД
+        Параметры подключения 'postgresql://username:password@localhost:5432/mydatabase'
+        """
+        engine = create_engine(db_params)
+        data = dataset.drop('id', axis=1)
+        data.to_sql(table_name, con=engine, if_exists='append', index=False)
+        print('Данные записаны в БД')

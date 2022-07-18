@@ -8,7 +8,8 @@ from ozon_performance import DbWorking
 from threading import Thread
 
 
-path_ = r'./data/test4/'
+# path_ = r'./data/test4/'
+path_ = r'./data/{}/'.format(str(date.today()))
 if not os.path.isdir(path_):
     os.mkdir(path_)
 
@@ -28,6 +29,7 @@ print(last_date)
 date_from = last_date
 date_to = str(date.today())
 
+# функция для получения и сохранения отчетов
 def thread_func(account_id, client_id, client_secret):
     ozon = OzonPerformance(account_id, client_id, client_secret, day_lim = 5, camp_lim = 5)
     if ozon.auth:
@@ -93,3 +95,9 @@ print('into_db', into_db.shape)
 into_db.to_csv(path_+'into_db.csv', sep=';', index=False)
 
 print(into_db)
+
+# # отправляем в БД
+# working.upl_to_db(dataset=data)
+
+# удаляем файлы
+# working.rem_csv(path_=path_)
