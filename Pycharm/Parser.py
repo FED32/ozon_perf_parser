@@ -97,7 +97,7 @@ into_db.to_csv(path_+'into_db.csv', sep=';', index=False)
 print(into_db)
 
 # # отправляем в БД
-# working.upl_to_db(dataset=data)
+# working.upl_to_db(dataset=into_db)
 
 # удаляем файлы
 # working.rem_csv(path_=path_)
