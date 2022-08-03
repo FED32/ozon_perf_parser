@@ -3,12 +3,13 @@ import numpy as np
 from datetime import date
 from datetime import datetime
 import os
+# import shutil
 from ozon_performance import OzonPerformance
 from ozon_performance import DbWorking
 from threading import Thread
 
 
-# path_ = r'./data/test4/'
+# path_ = r'./data/test7/'
 path_ = r'./data/{}/'.format(str(date.today()))
 if not os.path.isdir(path_):
     os.mkdir(path_)
@@ -29,15 +30,16 @@ print(last_date)
 date_from = last_date
 date_to = str(date.today())
 
+
 # функция для получения и сохранения отчетов
-def thread_func(account_id, client_id, client_secret):
-    ozon = OzonPerformance(account_id, client_id, client_secret, day_lim = 5, camp_lim = 5)
+def thread_func(*args):
+    ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=5, camp_lim=5)
     if ozon.auth:
-        ozon.collect_data(date_from = date_from, date_to = date_to,
-                        methods = {'statistics': True, 'phrases': False, 'attribution': False,
-                                      'media': False, 'product': False, 'daily': False})
-        ozon.save_data(path_ = path_, methods = {'statistics': True, 'phrases': False, 'attribution': False,
-                                                  'media': False,'product': False, 'daily': False})
+        ozon.collect_data(date_from=date_from, date_to=date_to,
+                          statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False)
+        ozon.save_data(path_=path_,
+                       statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False)
+
 
 threads = []
 
@@ -59,11 +61,11 @@ for thread in threads:
 for thread in threads:
     thread.join()
 
-#распаковываем архивы
-working.extract_zips(path_, rem = True)
+# распаковываем архивы
+working.extract_zips(path_, rem=True)
 
 # создаем датасет на основе загруженных по API данных
-dataset = working.make_dataset(path_ = path_)
+dataset = working.make_dataset(path_=path_)
 
 # обработаем пропуски
 dataset = dataset.fillna('nan')
@@ -77,12 +79,15 @@ db_data_from = db_data_from[db_data_from['data'] >= datetime.strptime(date_from,
 db_data_from = db_data_from[db_data_from['actionnum'].isin(dataset.actionnum.unique())]
 
 # колонки по которым происходит поиск совпадений
-cols = ['actionnum', 'data', 'request_type', 'viewtype', 'platfrom', 'views', 'clicks', 'ctr', 'audience', 'cpm', 'expense',
-       'order_id', 'order_number', 'ozon_id', 'ozon_id_ad_sku', 'articul', 'name', 'orders', 'price', 'revenue', 'search_price_perc', 'search_price_rur'
+cols = ['actionnum', 'data', 'request_type', 'viewtype', 'platfrom', 'views', 'clicks', 'ctr', 'audience', 'cpm',
+        'expense',
+        'order_id', 'order_number', 'ozon_id', 'ozon_id_ad_sku', 'articul', 'name', 'orders', 'price', 'revenue',
+        'search_price_perc', 'search_price_rur'
         ]
 
 # объединяем датасеты с удалением дубликатов
-into_db = pd.concat([db_data_from, dataset], axis=0).reset_index().drop('index', axis=1).drop_duplicates(subset=cols, keep=False)
+into_db = pd.concat([db_data_from, dataset], axis=0).reset_index().drop('index', axis=1).drop_duplicates(subset=cols,
+                                                                                                         keep=False)
 into_db = into_db.replace('nan', np.nan)
 
 # исключим записи из БД, оставим строки у которых нет id (так как это значение взято из БД)
@@ -92,12 +97,16 @@ print('dataset', dataset.shape)
 print('db_data_from', db_data_from.shape)
 print('into_db', into_db.shape)
 
-into_db.to_csv(path_+'into_db.csv', sep=';', index=False)
+into_db.to_csv(path_ + 'into_db.csv', sep=';', index=False)
 
 print(into_db)
 
 # # отправляем в БД
 # working.upl_to_db(dataset=into_db)
 
-# удаляем файлы
-# working.rem_csv(path_=path_)
+# # удаляем файлы
+# # working.rem_csv(path_=path_)
+# try:
+#     shutil.rmtree(path_)
+# except OSError as e:
+#     print ("Error: %s - %s." % (e.filename, e.strerror))

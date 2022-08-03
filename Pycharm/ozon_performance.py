@@ -122,8 +122,8 @@ class OzonPerformance:
             tms = []
             for t in range(0, delta.days, day_lim):
                 dt_fr = str((datetime.strptime(date_from, '%Y-%m-%d') + timedelta(days=t)).date())
-                if (datetime.strptime(date_from, '%Y-%m-%d') + timedelta(days=t + day_lim - 1)).date() >= (
-                datetime.strptime(date_to, '%Y-%m-%d')).date():
+                if (datetime.strptime(date_from, '%Y-%m-%d') + timedelta(days=t + day_lim - 1)).date() >= \
+                        (datetime.strptime(date_to, '%Y-%m-%d')).date():
                     dt_to = str((datetime.strptime(date_to, '%Y-%m-%d')).date())
                 else:
                     dt_to = str((datetime.strptime(date_from, '%Y-%m-%d') + timedelta(days=t + day_lim - 1)).date())
@@ -335,7 +335,7 @@ class OzonPerformance:
         else:
             print(response.text)
 
-    def get_traffic(self, t_date_from, t_date_to, type="TRAFFIC_SOURCES"):
+    def get_traffic(self, t_date_from, t_date_to, type_="TRAFFIC_SOURCES"):
         """
         Метод для запуска формирования отчёта с аналитикой внешнего трафика
         TRAFFIC_SOURCES — отчёт по источникам трафика
@@ -348,7 +348,7 @@ class OzonPerformance:
                 }
         body = {"dateFrom": t_date_from,
                 "dateTo": t_date_to,
-                "type": type
+                "type": type_
                 }
         response = requests.post(url, headers=head, data=json.dumps(body))
         if response.status_code == 200:
@@ -361,7 +361,7 @@ class OzonPerformance:
         """
         Возвращает информацию об отчёте
         """
-        url='https://performance.ozon.ru:443/api/client/vendors/statistics/' + uuid
+        url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/' + uuid
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
                 # "Content-Type": "application/json",
                 # "Accept": "application/json"
@@ -377,7 +377,8 @@ class OzonPerformance:
         """
         Получить файл отчета
         """
-        url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/report?UUID=' + uuid
+        # url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/report?UUID=' + uuid
+        url = 'https://performance.ozon.ru:443/external/api/statistics/report?UUID=' + uuid
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token']}
         response = requests.get(url, headers=head)
         if response.status_code == 200:
@@ -413,72 +414,67 @@ class OzonPerformance:
             print(response.text)
 
     def collect_data(self, date_from, date_to,
-                     methods={'statistics': False, 'phrases': False, 'attribution': False,
-                              'media': False, 'product': False, 'daily': False}):
+                     statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False):
         data = self.split_data(camp_lim=self.camp_lim)
-        time = self.split_time(date_from=date_from, date_to=date_to, day_lim=self.day_lim)
-        self.time = time
+        time_ = self.split_time(date_from=date_from, date_to=date_to, day_lim=self.day_lim)
+        self.time = time_
         self.date_from = date_from
         self.date_to = date_to
-        if methods['statistics'] is True:
+        if statistics is True:
             self.st_camp = []
-        if methods['phrases'] is True:
+        if phrases is True:
             self.st_ph = []
-        if methods['attribution'] is True:
+        if attribution is True:
             self.st_attr = []
-        if methods['media'] is True:
+        if media is True:
             self.st_med = self.get_media(self.campaigns, t_date_from=date_from, t_date_to=date_to)
-        if methods['product'] is True:
+        if product is True:
             self.st_pr = self.get_product(self.campaigns, t_date_from=date_from, t_date_to=date_to)
-        if methods['daily'] is True:
+        if daily is True:
             self.st_dai = self.get_daily(self.campaigns, t_date_from=date_from, t_date_to=date_to)
         try:
             for d in data:
-                for t in time:
-                    if methods['statistics'] is True:
+                for t in time_:
+                    if statistics is True:
                         self.st_camp.append(self.get_statistics(list(d.keys()), t_date_from=t[0], t_date_to=t[1]))
-                    if methods['phrases'] is True:
+                    if phrases is True:
                         self.st_ph.append(self.get_phrases(d, t_date_from=t[0], t_date_to=t[1]))
-                    if methods['attribution'] is True:
+                    if attribution is True:
                         self.st_attr.append(self.get_attribution(list(d.keys()), t_date_from=t[0], t_date_to=t[1]))
         except TimeoutError:
             print('Нет ответа от сервера')
 
     def save_data(self, path_,
-                  methods={'statistics': False, 'phrases': False, 'attribution': False,
-                           'media': False, 'product': False, 'daily': False}):
+                  statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False):
         #         folder = path_
         folder = path_ + f'{self.account_id}-{self.client_id}/'
         if not os.path.isdir(folder):
             os.mkdir(folder)
-        if methods['media'] is True:
+        if media is True:
             if not os.path.isdir(folder + 'media'):
                 os.mkdir(folder + 'media')
-#             name = folder + r'media/' + f"{self.account_id}-{self.client_id}_" + f"media_{self.date_from}-{self.date_to}.csv"
             name = folder + r'media/' + f"media_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_med.content)
             file.close()
             print('Сохранен', name)
-        if methods['product'] is True:
+        if product is True:
             if not os.path.isdir(folder + 'product'):
                 os.mkdir(folder + 'product')
-#             name = folder + r'product/' + f"{self.account_id}-{self.client_id}_" + f"product_{self.date_from}-{self.date_to}.csv"
             name = folder + r'product/' + f"product_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_pr.content)
             file.close()
             print('Сохранен', name)
-        if methods['daily'] is True:
+        if daily is True:
             if not os.path.isdir(folder + 'daily'):
                 os.mkdir(folder + 'daily')
-#             name = folder + r'daily/' + f"{self.account_id}-{self.client_id}_" +  f"daily_{self.date_from}-{self.date_to}.csv"
             name = folder + r'daily/' + f"daily_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_dai.content)
             file.close()
             print('Сохранен', name)
-        if methods['statistics'] is True:
+        if statistics is True:
             if not os.path.isdir(folder + 'statistics'):
                 os.mkdir(folder + 'statistics')
             for num, camp in enumerate(self.st_camp):
@@ -489,7 +485,6 @@ class OzonPerformance:
                         status = self.status_report(uuid=camp[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=camp[0])
-#                     name = folder + r'statistics/' + f"{self.account_id}-{self.client_id}_" + f"campaigns_{num}.{camp[1]}"
                     name = folder + r'statistics/' + f"campaigns_{num}.{camp[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
@@ -497,7 +492,7 @@ class OzonPerformance:
                     print('Сохранен', name)
                 except:
                     continue
-        if methods['phrases'] is True:
+        if phrases is True:
             if not os.path.isdir(folder + 'phrases'):
                 os.mkdir(folder + 'phrases')
             for num, ph in enumerate(self.st_ph):
@@ -510,7 +505,6 @@ class OzonPerformance:
                                 status = self.status_report(uuid=phrases[0]).json()['state']
                                 print(status)
                             report = self.get_report(uuid=phrases[0])
-#                             name = folder + r'phrases/' + f"{self.account_id}-{self.client_id}_" + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             name = folder + r'phrases/' + f"phrases_{num}_{n_camp}.{phrases[1]}"
                             file = open(name, 'wb')
                             file.write(report.content)
@@ -520,7 +514,7 @@ class OzonPerformance:
                             continue
                 except:
                     continue
-        if methods['attribution'] is True:
+        if attribution is True:
             if not os.path.isdir(folder + 'attribution'):
                 os.mkdir(folder + 'attribution')
             for num, attr in enumerate(self.st_attr):
@@ -531,7 +525,6 @@ class OzonPerformance:
                         status = self.status_report(uuid=attr[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=attr[0])
-#                     name = folder + r'attribution/' + f"{self.account_id}-{self.client_id}_" + f"attr_{num}.{attr[1]}"
                     name = folder + r'attribution/' + f"attr_{num}.{attr[1]}"
                     file = open(name, 'wb')
                     file.write(report.content)
@@ -539,6 +532,286 @@ class OzonPerformance:
                     print('Сохранен', name)
                 except:
                     continue
+
+    def get_camp_modes(self):
+        """
+        Доступные режимы создания рекламных кампаний
+        """
+        url = 'https://performance.ozon.ru:443/api/client/campaign/available'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        response = requests.get(url, headers=head)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(response.text)
+
+    def create_camp(self, title, from_date, to_date, daily_budget,
+                    exp_strategy="DAILY_BUDGET",
+                    placement="PLACEMENT_INVALID",
+                    pcm="PRODUCT_CAMPAIGN_MODE_AUTO"):
+        """
+        Метод для создания товарной рекламной кампании с моделью оплаты за показы
+        https://docs.ozon.ru/api/performance/#operation/CreateProductCampaignCPM
+        """
+        url = 'https://performance.ozon.ru:443/api/client/campaign/cpm/product'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"title": title,
+                "fromDate": from_date,
+                "toDate": to_date,
+                "dailyBudget": str(daily_budget),
+                "expenseStrategy": exp_strategy,
+                "placement": placement,
+                "productCampaignMode": pcm
+                }
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Кампания создана')
+            return response.json()
+        else:
+            return response.text
+
+    def camp_activate(self, campaign_id):
+        """
+        Активировать рекламную кампанию
+        """
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/activate'
+        response = requests.post(url, headers=head)
+        if response.status_code == 200:
+            print('Кампания активирована')
+            return response.json()
+        else:
+            return response.text
+
+    def camp_deactivate(self, campaign_id):
+        """
+        Деактивировать рекламную кампанию
+        """
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/deactivate'
+        response = requests.post(url, headers=head)
+        if response.status_code == 200:
+            print('Кампания деактивирована')
+            return response.json()
+        else:
+            return response.text
+
+    def camp_period(self, campaign_id, date_from, date_to
+                    #                     daily_budget,
+                    #                     exp_str='DAILY_BUDGET'
+                    ):
+        """
+        Метод для изменения сроков проведения кампании
+        Способ распределения бюджета:
+        DAILY_BUDGET — бюджет равномерно распределяется по дням;
+        ASAP — быстрая открутка, бюджет не ограничен по дням.
+        """
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/period'
+        body = {"fromDate": date_from,
+                "toDate": date_to
+                #                 "dailyBudget": daily_budget,
+                #                 "expenseStrategy": exp_str
+                }
+        response = requests.put(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Сроки кампании обновлены')
+            return response.json()
+        else:
+            return response.text
+
+    def camp_budget(self, campaign_id,
+                    #                     date_from,
+                    #                     date_to,
+                    daily_budget,
+                    exp_str='DAILY_BUDGET'
+                    ):
+        """
+        Метод для изменения ограничения дневного бюджета кампании
+        Способ распределения бюджета:
+        DAILY_BUDGET — бюджет равномерно распределяется по дням;
+        ASAP — быстрая открутка, бюджет не ограничен по дням.
+        """
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/daily_budget'
+        body = {
+            #                 "fromDate": date_from,
+            #                 "toDate": date_to,
+            "dailyBudget": daily_budget,
+            "expenseStrategy": exp_str
+        }
+        response = requests.put(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Дневной бюджет кампании обновлен')
+            return response.json()
+        else:
+            return response.text
+
+    @staticmethod
+    def card_bids(sku_list: list, bids_list: list, lim=500):
+        """
+        Для добавления в кампанию товаров с размещением в карточке товара
+        Для обновления ставок у товаров в рекламной кампании с размещением в карточке товара
+        """
+        sku_list = sku_list[:lim]
+        bids_list = bids_list[:lim]
+        if len(bids_list) == 0:
+            return [{'sku': a, 'bid': ''} for a in sku_list]
+        elif len(sku_list) == len(bids_list):
+            return [{'sku': a, 'bid': b} for a, b in zip(sku_list, bids_list)]
+        else:
+            print('Не правильный формат данных')
+
+    @staticmethod
+    def group_bids(sku_list, groups_list, lim=500):
+        """
+        Для добавления в кампанию товаров в ранее созданные группы с размещением на страницах каталога и поиска
+        """
+        sku_list = sku_list[:lim]
+        groups_list = groups_list[:lim]
+        if len(sku_list) == len(groups_list):
+            return [{'sku': a, 'bid': b} for a, b in zip(sku_list, groups_list)]
+        else:
+            print('Не правильный формат данных')
+
+    @staticmethod
+    def phrases_bids(sku_list: list, st_w_lists: list, phrases_list: list):
+        """
+        Для добавления в кампанию товаров без группы с размещением на страницах каталога и поиска
+        Для обновления ставок в рекламной кампании у товаров без группы с размещением на страницах каталога и поиска
+        (требует доработки, не полная информация в документации)
+        """
+        if len(sku_list) == len(st_w_lists) == len(phrases_list):
+            return [{'sku': a, 'stopWords': b, 'phrases': c} for a, b, c in zip(sku_list, st_w_lists, phrases_list)]
+        else:
+            print('Не правильный формат данных')
+
+    def add_products(self, campaign_id, bids):
+        """
+        Добавить товары в кампанию
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/products'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"bids": bids}
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Товары добавлены')
+            return response.json()
+        else:
+            return response.text
+
+    def upd_bids(self, campaign_id, bids):
+        """
+        Обновить ставки товаров
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/products'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"bids": bids}
+        response = requests.put(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Ставки обновлены')
+            return response.json()
+        else:
+            return response.text
+
+    def prod_list(self, campaign_id):
+        """
+        Список товаров кампании
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/products'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Accept": "application/json"
+                }
+        response = requests.get(url, headers=head)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(response.text)
+
+    def del_products(self, campaign_id, sku_list: list):
+        """
+        Удалить товары из кампании
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/products/delete'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"sku": sku_list}
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Товар удален из кампании')
+            return response.json()
+        else:
+            return response.text
+
+    def add_group(self, campaign_id: str, title: str,
+                  stopwords=None,
+                  phrases=None
+                  ):
+        """
+        Создать группу
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/group'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"title": title,
+                "stopWords": stopwords,
+                "phrases": phrases
+                }
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Группа создана')
+            return response.json()
+        else:
+            return response.text
+
+    def edit_group(self, campaign_id: str, group_id: str, title: str, stopwords=None, phrases=None):
+        """
+        Редактировать группу
+        """
+        url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/group/{group_id}'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"title": title,
+                "stopWords": stopwords,
+                "phrases": phrases
+                }
+        response = requests.put(url, headers=head, data=json.dumps(body))
+        if response.status_code == 200:
+            print('Группа обновлена')
+            return response.json()
+        else:
+            return response.text
 
 
 class DbWorking:
@@ -562,14 +835,16 @@ class DbWorking:
                                     where mp_id = 1\
                                     group by foo.client_id_performance, client_secret_performance\
                                     order by client_id_performance"
+        self.product_list_resp = 'SELECT * FROM product_list'
 
-    db_access = """host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
-                                       port=6432\
-                                       sslmode=verify-full\
-                                       dbname=market_db\
-                                       user=sfedyusnin\
-                                       password=Qazwsx123Qaz\
-                                       target_session_attrs=read-write"""
+    # db_access = """host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
+    #                                    port=6432\
+    #                                    sslmode=verify-full\
+    #                                    dbname=market_db\
+    #                                    user=sfedyusnin\
+    #                                    password=Qazwsx123Qaz\
+    #                                    target_session_attrs=read-write"""
+
     #         self.db_data = self.get_analitics_data()
 
     def test_db_connection(self):
@@ -653,7 +928,7 @@ class DbWorking:
         data = data[data.columns[-1:].tolist() + data.columns[:-1].tolist()]
         data = data[data.columns.dropna()]
         data = data.dropna(axis=0, how='any', thresh=10)
-        return (data)
+        return data
 
     def make_dataset(self, path_):
         """
@@ -721,7 +996,8 @@ class DbWorking:
                 print(f'Удаление {file}')
 
     def upl_to_db(self, dataset,
-                  db_params='postgresql://sfedyusnin:Qazwsx123Qaz@rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net:6432/market_db',
+                  db_params='postgresql://sfedyusnin:Qazwsx123Qaz@rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net:6432/\
+                  market_db',
                   table_name='analitics_data2'):
         """
         Загружает данные в БД
@@ -731,3 +1007,14 @@ class DbWorking:
         data = dataset.drop('id', axis=1)
         data.to_sql(table_name, con=engine, if_exists='append', index=False)
         print('Данные записаны в БД')
+
+    def get_products_list(self):
+        """
+        Загружает из базы таблицу со списком продуктов
+        """
+        try:
+            df = pd.read_sql(self.product_list_resp, psycopg2.connect(self.db_access))
+            print('Загружена product_list')
+            return df
+        except:
+            print('Доступ к таблице запрещен')
