@@ -177,7 +177,7 @@ class OzonPerformance:
                         return [response.json()['UUID'], 'csv']
                     else:
                         return [response.json()['UUID'], 'zip']
-                    break
+                    # break
                 else:
                     n += 1
         else:
@@ -265,7 +265,7 @@ class OzonPerformance:
                         return [response.json()['UUID'], 'csv']
                     else:
                         return [response.json()['UUID'], 'zip']
-                    break
+                    # break
                 else:
                     n += 1
         else:
@@ -335,7 +335,7 @@ class OzonPerformance:
         else:
             print(response.text)
 
-    def get_traffic(self, t_date_from, t_date_to, type_="TRAFFIC_SOURCES"):
+    def get_traffic(self, t_date_from, t_date_to, type="TRAFFIC_SOURCES"):
         """
         Метод для запуска формирования отчёта с аналитикой внешнего трафика
         TRAFFIC_SOURCES — отчёт по источникам трафика
@@ -343,17 +343,31 @@ class OzonPerformance:
         """
         url = self.methods['traffic']
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
-                "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Content-Type": "application/json"
+#                "Accept": "application/json"
                 }
         body = {"dateFrom": t_date_from,
                 "dateTo": t_date_to,
-                "type": type_
+                "type": type
                 }
         response = requests.post(url, headers=head, data=json.dumps(body))
         if response.status_code == 200:
             print('Аналитика трафика получена')
             return response.json()['UUID']
+        else:
+            print(response.text)
+
+    def traffic_list(self):
+        """
+        Список запрошенных отчётов с аналитикой внешнего трафика
+        """
+        url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/list'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json"
+                }
+        response = requests.get(url, headers=head)
+        if response.status_code == 200:
+            return response.json()['items']
         else:
             print(response.text)
 
@@ -363,24 +377,24 @@ class OzonPerformance:
         """
         url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/' + uuid
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
-                # "Content-Type": "application/json",
-                # "Accept": "application/json"
+                 "Content-Type": "application/json"
                 }
         params = {'vendor': 'true'}
         response = requests.get(url, headers=head, params=params)
+        # print(response.status_code)
         if response.status_code == 200:
-            return response
+            return response.json()
         else:
             print(response.text)
 
-    def get_tr_rep(self, uuid):
+    def get_traffic_report(self, uuid):
         """
         Получить файл отчета
         """
-        # url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/report?UUID=' + uuid
-        url = 'https://performance.ozon.ru:443/external/api/statistics/report?UUID=' + uuid
+        url = f'https://performance.ozon.ru:443/api/client/statistics/report?UUID={uuid}&vendor=t'
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token']}
         response = requests.get(url, headers=head)
+        print(response.status_code)
         if response.status_code == 200:
             return response
         else:
@@ -414,7 +428,8 @@ class OzonPerformance:
             print(response.text)
 
     def collect_data(self, date_from, date_to,
-                     statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False):
+                     statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False,
+                     traffic=False):
         data = self.split_data(camp_lim=self.camp_lim)
         time_ = self.split_time(date_from=date_from, date_to=date_to, day_lim=self.day_lim)
         self.time = time_
@@ -432,6 +447,8 @@ class OzonPerformance:
             self.st_pr = self.get_product(self.campaigns, t_date_from=date_from, t_date_to=date_to)
         if daily is True:
             self.st_dai = self.get_daily(self.campaigns, t_date_from=date_from, t_date_to=date_to)
+        if traffic is True:
+            self.st_trf = self.get_traffic(t_date_from=date_from, t_date_to=date_to)
         try:
             for d in data:
                 for t in time_:
@@ -445,7 +462,8 @@ class OzonPerformance:
             print('Нет ответа от сервера')
 
     def save_data(self, path_,
-                  statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False):
+                  statistics=False, phrases=False, attribution=False, media=False, product=False, daily=False,
+                  traffic=False):
         #         folder = path_
         folder = path_ + f'{self.account_id}-{self.client_id}/'
         if not os.path.isdir(folder):
@@ -472,6 +490,20 @@ class OzonPerformance:
             name = folder + r'daily/' + f"daily_{self.date_from}-{self.date_to}.csv"
             file = open(name, 'wb')
             file.write(self.st_dai.content)
+            file.close()
+            print('Сохранен', name)
+        if traffic is True:
+            if not os.path.isdir(folder + 'traffic'):
+                os.mkdir(folder + 'traffic')
+            status = ''
+            while status != 'OK':
+                time.sleep(1)
+                status = self.status_traffic(uuid=self.st_trf)['state']
+                print(status)
+            report = self.get_traffic_report(uuid=self.st_trf)
+            name = folder + r'traffic/' + f"traffic_{self.date_from}-{self.date_to}.xlsx"
+            file = open(name, 'wb')
+            file.write(report.content)
             file.close()
             print('Сохранен', name)
         if statistics is True:
@@ -815,26 +847,33 @@ class OzonPerformance:
 
 
 class DbWorking:
-    def __init__(self, db_access="""host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
+    def __init__(self, keys_resp,
+                 db_access="""host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
                                     port=6432\
                                     sslmode=verify-full\
                                     dbname=market_db\
                                     user=sfedyusnin\
                                     password=Qazwsx123Qaz\
-                                    target_session_attrs=read-write"""):
+                                    target_session_attrs=read-write""",
+                 data_table_name='analitics_data2',
+                 # account_table='account_list'
+                 ):
+
         self.db_access = db_access
+        self.data_table_name = data_table_name
         # необходимые запросы к БД
         self.api_keys_resp = 'SELECT * FROM account_list'
         self.keys_dt_cols_resp = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'account_list'"
-        self.an_dt_resp = 'SELECT * FROM analitics_data2'
+        self.an_dt_resp = f"SELECT * FROM {data_table_name}"
         self.an_dt_cols_resp = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analitics_data2'"
-        self.api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
-                                    from (select distinct(client_id_performance) from account_list) as foo\
-                                    join account_list\
-                                    on foo.client_id_performance = account_list.client_id_performance\
-                                    where mp_id = 1\
-                                    group by foo.client_id_performance, client_secret_performance\
-                                    order by client_id_performance"
+        # self.api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
+        #                             from (select distinct(client_id_performance) from account_list) as foo\
+        #                             join account_list\
+        #                             on foo.client_id_performance = account_list.client_id_performance\
+        #                             where mp_id = 1\
+        #                             group by foo.client_id_performance, client_secret_performance\
+        #                             order by client_id_performance"
+        self.api_perf_keys_resp = keys_resp
         self.product_list_resp = 'SELECT * FROM product_list'
 
     # db_access = """host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
@@ -997,15 +1036,15 @@ class DbWorking:
 
     def upl_to_db(self, dataset,
                   db_params='postgresql://sfedyusnin:Qazwsx123Qaz@rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net:6432/\
-                  market_db',
-                  table_name='analitics_data2'):
+                  market_db'
+                  ):
         """
         Загружает данные в БД
         Параметры подключения 'postgresql://username:password@localhost:5432/mydatabase'
         """
         engine = create_engine(db_params)
         data = dataset.drop('id', axis=1)
-        data.to_sql(table_name, con=engine, if_exists='append', index=False)
+        data.to_sql(table_name=self.data_table_name, con=engine, if_exists='append', index=False)
         print('Данные записаны в БД')
 
     def get_products_list(self):

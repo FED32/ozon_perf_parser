@@ -3,19 +3,48 @@ import numpy as np
 from datetime import date
 from datetime import datetime
 import os
-# import shutil
+import shutil
 from ozon_performance import OzonPerformance
 from ozon_performance import DbWorking
 from threading import Thread
 
-
+# путь для сохранения файлов
 # path_ = r'./data/test7/'
 path_ = r'./data/{}/'.format(str(date.today()))
 if not os.path.isdir(path_):
     os.mkdir(path_)
 
+# параметры доступа к базе данных
+host = 'rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net'
+port = '6432'
+ssl_mode = 'verify-full'
+db_name = 'market_db'
+user = 'sfedyusnin'
+password = 'Qazwsx123Qaz'
+target_session_attrs = 'read-write'
+
+# таблица с данными
+data_table_name='analitics_data2'
+
+# sql запрос аккаунтов
+api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
+                                    from (select distinct(client_id_performance) from account_list) as foo\
+                                    join account_list\
+                                    on foo.client_id_performance = account_list.client_id_performance\
+                                    where mp_id = 1\
+                                    group by foo.client_id_performance, client_secret_performance\
+                                    order by client_id_performance"
+
 # создаем экземпляр класса, проверяем соединение с базой
-working = DbWorking()
+db_access = f"host={host} " \
+            f"port={port} " \
+            f"sslmode={ssl_mode} " \
+            f"dbname={db_name} " \
+            f"user={user} " \
+            f"password={password} " \
+            f"target_session_attrs={target_session_attrs}"
+
+working = DbWorking(db_access=db_access, keys_resp=api_perf_keys_resp, data_table_name=data_table_name)
 working.test_db_connection()
 
 # загружаем таблицы с данными и ключами
@@ -27,7 +56,9 @@ db_data = working.db_data
 last_date = str(working.get_last_date())
 print(last_date)
 
-date_from = last_date
+# задаем диапазон дат
+date_from = '2022-09-01'
+# date_from = last_date
 date_to = str(date.today())
 
 
@@ -36,9 +67,11 @@ def thread_func(*args):
     ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=5, camp_lim=5)
     if ozon.auth:
         ozon.collect_data(date_from=date_from, date_to=date_to,
-                          statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False)
+                          statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False,
+                          traffic=False)
         ozon.save_data(path_=path_,
-                       statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False)
+                       statistics=True, phrases=False, attribution=False, media=False, product=False, daily=False,
+                       traffic=False)
 
 
 threads = []
@@ -101,12 +134,17 @@ into_db.to_csv(path_ + 'into_db.csv', sep=';', index=False)
 
 print(into_db)
 
-# # отправляем в БД
-# working.upl_to_db(dataset=into_db)
 
-# # удаляем файлы
-# # working.rem_csv(path_=path_)
-# try:
-#     shutil.rmtree(path_)
-# except OSError as e:
-#     print ("Error: %s - %s." % (e.filename, e.strerror))
+# !!!РАСКОММЕНТИРОВАТЬ ДАЛЕЕ НА СВОЙ СТРАХ И РИСК!!!
+
+# отправляем в БД
+db_params = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
+
+working.upl_to_db(dataset=into_db, db_params=db_params)
+
+# удаляем файлы
+
+try:
+    shutil.rmtree(path_)
+except OSError as e:
+    print ("Error: %s - %s." % (e.filename, e.strerror))
