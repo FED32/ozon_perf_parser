@@ -57,10 +57,8 @@ last_date = str(working.get_last_date())
 print(last_date)
 
 # задаем диапазон дат
-date_from = '2022-09-01'
-# date_from = last_date
+date_from = last_date
 date_to = str(date.today())
-
 
 # функция для получения и сохранения отчетов
 def thread_func(*args):
