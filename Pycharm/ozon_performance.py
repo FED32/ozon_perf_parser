@@ -2,7 +2,7 @@ import requests
 import json
 from datetime import datetime
 from datetime import timedelta
-# from datetime import date
+from datetime import date
 import time
 import os
 
@@ -37,6 +37,7 @@ class OzonPerformance:
         try:
             self.auth = self.get_token()
         except:
+            self.auth = None
             print('Нет доступа к серверу')
 
         try:
@@ -45,6 +46,8 @@ class OzonPerformance:
             for camp in self.campaigns:
                 self.objects[camp] = [obj['id'] for obj in self.get_objects(campaign_id=camp)]
         except:
+            # self.campaigns = None
+            # self.objects = None
             print('Ошибка при получении кампаний')
 
         self.st_camp = []
@@ -105,12 +108,12 @@ class OzonPerformance:
         """
         Разбивает данные в соответствии с ограничениями Ozon
         """
-        if len(self.objects) > camp_lim:
+        if len(self.objects) >= camp_lim:
             data = []
             for i in range(0, len(self.objects), camp_lim):
                 data.append(dict(list(self.objects.items())[i:i + camp_lim]))
         else:
-            data = self.objects
+            data = [self.objects]
         return data
 
     def split_time(self, date_from, date_to, day_lim):
@@ -890,11 +893,18 @@ class DbWorking:
         """
         Проверка доступа к БД
         """
-        conn = psycopg2.connect(self.db_access)
-        q = conn.cursor()
-        q.execute('SELECT version()')
-        print(q.fetchone())
-        conn.close()
+        try:
+            conn = psycopg2.connect(self.db_access)
+            q = conn.cursor()
+            q.execute('SELECT version()')
+            connection = q.fetchone()
+            print(connection)
+            conn.close()
+            return connection
+        except:
+            print('Нет подключения к БД')
+            return None
+
 
     def get_analitics_data(self):
         """
@@ -922,6 +932,7 @@ class DbWorking:
             return df
         except:
             print('Доступ к таблице запрещен')
+            return None
 
     def get_perf_keys(self):
         """
@@ -933,6 +944,7 @@ class DbWorking:
             return df
         except:
             print('Доступ к таблице запрещен')
+            return None
 
     def extract_zips(self, path_, rem=False):
         """
@@ -1044,7 +1056,7 @@ class DbWorking:
         """
         engine = create_engine(db_params)
         data = dataset.drop('id', axis=1)
-        data.to_sql(table_name=self.data_table_name, con=engine, if_exists='append', index=False)
+        data.to_sql(name=self.data_table_name, con=engine, if_exists='append', index=False)
         print('Данные записаны в БД')
 
     def get_products_list(self):
