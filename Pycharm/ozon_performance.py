@@ -912,7 +912,6 @@ class DbWorking:
         """
         self.db_data = pd.read_sql(self.an_dt_resp, psycopg2.connect(self.db_access))
         print('Загружена analitics_data')
-
     #         return self.db_data
 
     def get_last_date(self):
@@ -960,7 +959,8 @@ class DbWorking:
                     os.remove(file)
                     print(f'Удаление {file}')
 
-    def stat_read_trans(self, file, api_id=None, account_id=None):
+    @staticmethod
+    def stat_read_trans(file, api_id=None, account_id=None):
         """
         Обрабатывает датасет
         """
@@ -1032,6 +1032,89 @@ class DbWorking:
             if self.db_data[col].dtypes == 'float64' or self.db_data[col].dtypes == 'int64':
                 dataset[col] = dataset[col].str.replace(',', '.')
                 dataset[col] = dataset[col].replace(r'^\s*$', np.nan, regex=True)
+                dataset[col] = dataset[col].astype(self.db_data[col].dtypes)
+
+        return dataset
+
+    @staticmethod
+    def stat_read_trans2(file, api_id=np.nan, account_id=np.nan):
+        """
+        Обрабатывает датасет
+        """
+        data = pd.read_csv(file, sep=';', header=1,
+                           skipfooter=1, engine='python'
+                           )
+        data = data.dropna(axis=0, how='any', thresh=10)
+        camp = pd.read_csv(file, sep=';', header=0, nrows=0).columns[-1].split(',')[0].split()[-1]
+
+        data['api_id'] = api_id
+        data['account_id'] = account_id
+        data['actionnum'] = camp
+
+        data.rename(columns={'ID заказа': 'order_id',
+                             'Номер заказа': 'order_number',
+                             'Ozon ID': 'ozon_id',
+                             'Ozon ID рекламируемого товара': 'ozon_id_ad_sku',
+                             'Артикул': 'articul',
+                             'Ставка, %': 'search_price_perc',
+                             'Ставка, руб.': 'search_price_rur',
+                             'Тип страницы': 'pagetype',
+                             'Условие показа': 'viewtype',
+                             'Показы': 'views',
+                             'Клики': 'clicks',
+                             'CTR (%)': 'ctr',
+                             'Средняя ставка за 1000 показов (руб.)': 'cpm',
+                             'Заказы модели': 'orders_model',
+                             'Выручка с заказов модели (руб.)': 'revenue_model',
+                             'Тип условия': 'request_type',
+                             'Платформа': 'platfrom',
+                             'Охват': 'audience',
+                             'Баннер': 'banner',
+                             'Средняя ставка (руб.)': 'avrg_bid',
+                             'Расход за минусом бонусов (руб., с НДС)': 'exp_bonus',
+                             'Дата': 'data',
+                             'День': 'data',
+                             'Наименование': 'name',
+                             'Название товара': 'name',
+                             'Количество': 'orders',
+                             'Заказы': 'orders',
+                             'Цена продажи': 'price',
+                             'Цена товара (руб.)': 'price',
+                             'Выручка (руб.)': 'revenue',
+                             'Стоимость, руб.': 'revenue',
+                             'Расход (руб., с НДС)': 'expense',
+                             'Расход, руб.': 'expense',
+                             'Unnamed: 1': 'empty'
+                             }, inplace=True)
+
+        data['data'] = data['data'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y').date())
+        #     print(data.shape)
+        return data
+
+    def make_dataset2(self, path_):
+        """
+        Собирает датасет
+        """
+        stat_data = []
+        for folder in os.listdir(path_):
+            csv_files = glob.glob(os.path.join(path_ + folder + r'/statistics', "*.csv"))
+            for file in csv_files:
+                try:
+                    account_id = os.path.dirname(file).split('/')[-2].split('-')[0]
+                    api_id = os.path.dirname(file).split('/')[-2].split('-')[1]
+                    stat_data.append(self.stat_read_trans2(file, api_id=api_id, account_id=account_id))
+                except IndexError:
+                    continue
+
+        dataset = pd.concat(stat_data, axis=0).reset_index().drop('index', axis=1)
+
+        for col in dataset.columns:
+            # print(col, working.db_data[col].dtypes, dataset[col].dtypes)
+            if self.db_data[col].dtypes != dataset[col].dtypes:
+                if (self.db_data[col].dtypes == 'float64' or self.db_data[col].dtypes == 'int64') and \
+                        dataset[col].dtypes == 'object':
+                    dataset[col] = dataset[col].str.replace(',', '.')
+                    dataset[col] = dataset[col].replace(r'^\s*$', np.nan, regex=True)
                 dataset[col] = dataset[col].astype(self.db_data[col].dtypes)
 
         return dataset
