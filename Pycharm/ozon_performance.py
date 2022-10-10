@@ -5,7 +5,6 @@ from datetime import timedelta
 from datetime import date
 import time
 import os
-
 import pandas as pd
 import numpy as np
 import glob
@@ -16,7 +15,8 @@ from sqlalchemy import create_engine
 
 
 class OzonPerformance:
-    def __init__(self, account_id, client_id, client_secret,
+    def __init__(self, client_id, client_secret,
+                 account_id=None,
                  day_lim=2,
                  camp_lim=2):
         self.account_id = account_id
@@ -347,7 +347,7 @@ class OzonPerformance:
         url = self.methods['traffic']
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
                 "Content-Type": "application/json"
-#                "Accept": "application/json"
+                #                "Accept": "application/json"
                 }
         body = {"dateFrom": t_date_from,
                 "dateTo": t_date_to,
@@ -380,7 +380,7 @@ class OzonPerformance:
         """
         url = 'https://performance.ozon.ru:443/api/client/vendors/statistics/' + uuid
         head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
-                 "Content-Type": "application/json"
+                "Content-Type": "application/json"
                 }
         params = {'vendor': 'true'}
         response = requests.get(url, headers=head, params=params)
@@ -578,10 +578,7 @@ class OzonPerformance:
                 "Accept": "application/json"
                 }
         response = requests.get(url, headers=head)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(response.text)
+        return response
 
     def create_camp(self, title, from_date, to_date, daily_budget,
                     exp_strategy="DAILY_BUDGET",
@@ -605,11 +602,48 @@ class OzonPerformance:
                 "productCampaignMode": pcm
                 }
         response = requests.post(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Кампания создана')
-            return response.json()
-        else:
-            return response.text
+        return response
+
+    def create_camp2(self,
+                     title=None,
+                     from_date=None,
+                     to_date=None,
+                     daily_budget=None,
+                     exp_strategy=None,
+                     placement="PLACEMENT_INVALID",
+                     product_autopilot_strategy=None,
+                     autopilot=None,
+                     pcm=None
+                     ):
+        """
+        Метод для создания товарной рекламной кампании с моделью оплаты за показы
+        https://docs.ozon.ru/api/performance/#operation/CreateProductCampaignCPM
+        """
+        url = 'https://performance.ozon.ru:443/api/client/campaign/cpm/product'
+        head = {"Authorization": self.auth['token_type'] + ' ' + self.auth['access_token'],
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+                }
+        body = {"placement": placement}
+        if title is not None:
+            body.setdefault('title', title)
+        if from_date is not None:
+            body.setdefault('from_date', from_date)
+        if to_date is not None:
+            body.setdefault('to_date', to_date)
+        if daily_budget is not None:
+            body.setdefault('daily_budget', daily_budget)
+        if exp_strategy is not None:
+            body.setdefault('exp_strategy', exp_strategy)
+        if product_autopilot_strategy is not None:
+            body.setdefault('product_autopilot_strategy', product_autopilot_strategy)
+        if autopilot is not None:
+            body.setdefault('autopilot', autopilot)
+        if pcm is not None:
+            body.setdefault('pcm', pcm)
+
+        response = requests.post(url, headers=head, data=json.dumps(body))
+        return response
 
     def camp_activate(self, campaign_id):
         """
@@ -621,11 +655,7 @@ class OzonPerformance:
                 }
         url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/activate'
         response = requests.post(url, headers=head)
-        if response.status_code == 200:
-            print('Кампания активирована')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     def camp_deactivate(self, campaign_id):
         """
@@ -638,11 +668,7 @@ class OzonPerformance:
 
         url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/deactivate'
         response = requests.post(url, headers=head)
-        if response.status_code == 200:
-            print('Кампания деактивирована')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     def camp_period(self, campaign_id, date_from, date_to
                     #                     daily_budget,
@@ -661,19 +687,11 @@ class OzonPerformance:
         url = f'https://performance.ozon.ru:443/api/client/campaign/{campaign_id}/period'
         body = {"fromDate": date_from,
                 "toDate": date_to
-                #                 "dailyBudget": daily_budget,
-                #                 "expenseStrategy": exp_str
                 }
         response = requests.put(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Сроки кампании обновлены')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     def camp_budget(self, campaign_id,
-                    #                     date_from,
-                    #                     date_to,
                     daily_budget,
                     exp_str='DAILY_BUDGET'
                     ):
@@ -691,54 +709,74 @@ class OzonPerformance:
         body = {
             #                 "fromDate": date_from,
             #                 "toDate": date_to,
-            "dailyBudget": daily_budget,
+            "dailyBudget": daily_budget*1e6,
             "expenseStrategy": exp_str
         }
         response = requests.put(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Дневной бюджет кампании обновлен')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     @staticmethod
-    def card_bids(sku_list: list, bids_list: list, lim=500):
+    def card_bids(sku_list: list, bids_list=None, lim=500):
         """
         Для добавления в кампанию товаров с размещением в карточке товара
         Для обновления ставок у товаров в рекламной кампании с размещением в карточке товара
         """
-        sku_list = sku_list[:lim]
-        bids_list = bids_list[:lim]
-        if len(bids_list) == 0:
-            return [{'sku': a, 'bid': ''} for a in sku_list]
-        elif len(sku_list) == len(bids_list):
-            return [{'sku': a, 'bid': b} for a, b in zip(sku_list, bids_list)]
+        if bids_list is not None:
+            sku_list = sku_list[:lim]
+            bids_list = bids_list[:lim]
+            if len(sku_list) == len(bids_list):
+                return [{'sku': a, 'bid': float(b)*1e6} for a, b in zip(sku_list, bids_list)]
+            else:
+                print('Не правильный формат данных')
+                return None
         else:
-            print('Не правильный формат данных')
+            sku_list = sku_list[:lim]
+            return [{'sku': a, 'bid': None} for a in sku_list]
 
     @staticmethod
-    def group_bids(sku_list, groups_list, lim=500):
+    def group_bids(sku_list, groups_list, bids_list=None, lim=500):
         """
         Для добавления в кампанию товаров в ранее созданные группы с размещением на страницах каталога и поиска
         """
-        sku_list = sku_list[:lim]
-        groups_list = groups_list[:lim]
-        if len(sku_list) == len(groups_list):
-            return [{'sku': a, 'bid': b} for a, b in zip(sku_list, groups_list)]
+        if sku_list is not None and groups_list is not None and bids_list is not None:
+            sku_list = sku_list[:lim]
+            bids_list = bids_list[:lim]
+            groups_list = groups_list[:lim]
+            if len(sku_list) == len(groups_list) == len(bids_list):
+                return [{'sku': a, 'bid': float(b)*1e6, 'groupId': c} for a, b, c in zip(sku_list, bids_list, groups_list)]
+            else:
+                print('Не правильный формат данных')
+                return None
+        elif sku_list is not None and groups_list is not None and bids_list is None:
+            sku_list = sku_list[:lim]
+            groups_list = groups_list[:lim]
+            if len(sku_list) == len(groups_list):
+                return [{'sku': a, 'bid': None, 'groupId': c} for a, c in zip(sku_list, groups_list)]
+            else:
+                print('Не правильный формат данных')
+                return None
         else:
             print('Не правильный формат данных')
+            return None
 
     @staticmethod
-    def phrases_bids(sku_list: list, st_w_lists: list, phrases_list: list):
+    def phrases_bid(sku: str, stopwords: list, phrases: list, bids_list=None):
         """
-        Для добавления в кампанию товаров без группы с размещением на страницах каталога и поиска
-        Для обновления ставок в рекламной кампании у товаров без группы с размещением на страницах каталога и поиска
-        (требует доработки, не полная информация в документации)
+        Для добавления (обновления) в кампанию товара без группы с размещением на страницах каталога и поиска
         """
-        if len(sku_list) == len(st_w_lists) == len(phrases_list):
-            return [{'sku': a, 'stopWords': b, 'phrases': c} for a, b, c in zip(sku_list, st_w_lists, phrases_list)]
+        if bids_list is not None and len(phrases) == len(bids_list):
+            return [{'sku': sku,
+                     'stopWords': stopwords,
+                     'phrases': [{'phrase': a, 'bid': float(b)*1e6} for a, b in zip(phrases, bids_list)]
+                     }]
+        elif bids_list is None:
+            return [{'sku': sku,
+                     'stopWords': stopwords,
+                     'phrases': [{'phrase': a, 'bid': None} for a in phrases]
+                     }]
         else:
             print('Не правильный формат данных')
+            return None
 
     def add_products(self, campaign_id, bids):
         """
@@ -751,11 +789,7 @@ class OzonPerformance:
                 }
         body = {"bids": bids}
         response = requests.post(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Товары добавлены')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     def upd_bids(self, campaign_id, bids):
         """
@@ -768,11 +802,7 @@ class OzonPerformance:
                 }
         body = {"bids": bids}
         response = requests.put(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Ставки обновлены')
-            return response.json()
-        else:
-            return response.text
+        return response
 
     def prod_list(self, campaign_id):
         """
@@ -783,10 +813,7 @@ class OzonPerformance:
                 "Accept": "application/json"
                 }
         response = requests.get(url, headers=head)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(response.text)
+        return response
 
     def del_products(self, campaign_id, sku_list: list):
         """
@@ -799,15 +826,13 @@ class OzonPerformance:
                 }
         body = {"sku": sku_list}
         response = requests.post(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Товар удален из кампании')
-            return response.json()
-        else:
-            return response.text
+        return response
 
-    def add_group(self, campaign_id: str, title: str,
+    def add_group(self, campaign_id: str,
+                  title=None,
                   stopwords=None,
-                  phrases=None
+                  phrases=None,
+                  bids_list=None
                   ):
         """
         Создать группу
@@ -817,18 +842,23 @@ class OzonPerformance:
                 "Content-Type": "application/json",
                 "Accept": "application/json"
                 }
+        if phrases is not None and bids_list is not None and len(phrases)==len(bids_list):
+            phrases_list = [{'phrase': a, 'bid': b*1e6} for a, b in zip(phrases, bids_list)]
+        else:
+            phrases_list = None
         body = {"title": title,
                 "stopWords": stopwords,
-                "phrases": phrases
+                "phrases": phrases_list
                 }
         response = requests.post(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Группа создана')
-            return response.json()
-        else:
-            return response.text
+        return response
 
-    def edit_group(self, campaign_id: str, group_id: str, title: str, stopwords=None, phrases=None):
+    def edit_group(self, campaign_id: str,
+                   group_id: str,
+                   title: str,
+                   stopwords=None,
+                   phrases=None,
+                   bids_list=None):
         """
         Редактировать группу
         """
@@ -837,16 +867,16 @@ class OzonPerformance:
                 "Content-Type": "application/json",
                 "Accept": "application/json"
                 }
+        if phrases is not None and bids_list is not None and len(phrases)==len(bids_list):
+            phrases_list = [{'phrase': a, 'bid': b*1e6} for a, b in zip(phrases, bids_list)]
+        else:
+            phrases_list = None
         body = {"title": title,
                 "stopWords": stopwords,
-                "phrases": phrases
+                "phrases": phrases_list
                 }
         response = requests.put(url, headers=head, data=json.dumps(body))
-        if response.status_code == 200:
-            print('Группа обновлена')
-            return response.json()
-        else:
-            return response.text
+        return response
 
 
 class DbWorking:
@@ -905,13 +935,13 @@ class DbWorking:
             print('Нет подключения к БД')
             return None
 
-
     def get_analitics_data(self):
         """
         Загружает таблицу из базы
         """
         self.db_data = pd.read_sql(self.an_dt_resp, psycopg2.connect(self.db_access))
         print('Загружена analitics_data')
+
     #         return self.db_data
 
     def get_last_date(self):
