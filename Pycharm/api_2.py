@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask import Response
 from werkzeug.exceptions import BadRequestKeyError
 from configparser import ConfigParser
 from ozon_performance import OzonPerformance
@@ -39,23 +40,26 @@ def get_campaigns():
     """
     Метод для вывода списка кампаний
         ---
-        parameters:
-          - name: body
-            in: body
-            type: object
-            required: true
-        definitions:
-          Client Id:
-            type: string
-          Client Secret:
-            type: string
-          Campaigns:
-            type: object
-
-        responses:
-          200:
-            description: Список кампаний
-
+    paths:
+      parameters:
+        - name: body
+          in: body
+          type: object
+          required: true
+      responses:
+        200:
+          description: Список кампаний
+    components:
+      schemas:
+        Campaigns:
+          type: object
+          properties:
+            client_id:
+              type: string
+            client_secret:
+              type: string
+          xml:
+            name: Campaigns
     """
     try:
         json_file = request.get_json(force=False)
@@ -68,10 +72,40 @@ def get_campaigns():
             return jsonify({'result': ozon.get_campaigns()})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # список рекламируемых объектов в кампании
 @app.route('/ozonperformance/objects', methods=['POST'])
 def get_objects():
+    """Example endpoint returning a list of colors by palette
+    This is using docstrings for specifications.
+    ---
+    parameters:
+      - name: palette
+        in: path
+        type: string
+        enum: ['all', 'rgb', 'cmyk']
+        required: true
+        default: all
+    definitions:
+      Palette:
+        type: object
+        properties:
+          palette_name:
+            type: array
+            items:
+              $ref: '#/definitions/Color'
+      Color:
+        type: string
+    responses:
+      200:
+        description: A list of colors (may be filtered by palette)
+        schema:
+          $ref: '#/definitions/Palette'
+        examples:
+          rgb: ['red', 'green', 'blue']
+    """
     try:
         json_file = request.get_json(force=False)
         ozon = OzonPerformance(client_id=json_file["client_id"],
@@ -79,11 +113,10 @@ def get_objects():
         if ozon.auth is None:
             return jsonify({'error': 'Ошибка авторизации'})
         else:
-            if json_file["campaign_id"] is not None:
-                return jsonify({'result': ozon.get_objects(campaign_id=json_file["campaign_id"])})
-            else:
-                return jsonify({'error': 'Не задан обязательный параметр campaign_id'})
+            return jsonify({'result': ozon.get_objects(campaign_id=json_file["campaign_id"])})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # доступные режимы создания рекламных кампаний
@@ -105,6 +138,8 @@ def get_obj():
             except:
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # создать кампанию
@@ -135,6 +170,8 @@ def add_campaign():
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # активировать кампанию
 @app.route('/ozonperformance/activate', methods=['POST'])
@@ -156,6 +193,8 @@ def activate_camp():
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # деактивировать кампанию
 @app.route('/ozonperformance/deactivate', methods=['POST'])
@@ -176,6 +215,8 @@ def deactivate_camp():
             except:
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # изменить сроки проведения кампании
@@ -200,6 +241,8 @@ def campaign_period():
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # изменить ограничения дневного бюджета кампании
 @app.route('/ozonperformance/budget', methods=['POST'])
@@ -222,6 +265,8 @@ def campaign_budget():
             except:
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # создать группу
@@ -248,6 +293,8 @@ def add_group():
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # редактировать группу
 @app.route('/ozonperformance/editgroup', methods=['POST'])
@@ -273,6 +320,8 @@ def edit_group():
             except:
                 return jsonify({'error': 'ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # добавить товары в кампанию с размещением в карточке товара
@@ -301,6 +350,8 @@ def addcardproducts():
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # добавление в кампанию товаров в ранее созданные группы с размещением на страницах каталога и поиска
 @app.route('/ozonperformance/addgroupproducts', methods=['POST'])
@@ -328,6 +379,8 @@ def addgroupproducts():
             else:
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # добавление товара на страницах каталога и поиска — добавление без группы
@@ -358,6 +411,8 @@ def addproduct():
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # обновление ставок товаров с размещением в карточке товара
 @app.route('/ozonperformance/updbidscardproducts', methods=['POST'])
@@ -385,6 +440,8 @@ def updbidscardproducts():
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # обновление ставок товаров в группах с размещением на страницах каталога и поиска
 @app.route('/ozonperformance/updbidsgroupproducts', methods=['POST'])
@@ -411,6 +468,8 @@ def updbidsgroupproducts():
             else:
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # обновление ставок товара на страницах каталога и поиска — без группы
@@ -441,6 +500,8 @@ def updbidsproducts():
                 return jsonify({'error': 'Не правильный формат данных'})
     except BadRequestKeyError:
         return Response("Пустое значение", 400)
+    except KeyError:
+        return Response("Пустое значение", 400)
 
 # список товаров кампании
 @app.route('/ozonperformance/prodlist', methods=['POST'])
@@ -462,6 +523,8 @@ def prodlist():
             except:
                 return jsonify({'error': 'Ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 # удалить товары из кампании
@@ -485,6 +548,8 @@ def delproducts():
             except:
                 return jsonify({'error': 'Не известная ошибка при обращении к серверу OZON'})
     except BadRequestKeyError:
+        return Response("Пустое значение", 400)
+    except KeyError:
         return Response("Пустое значение", 400)
 
 
