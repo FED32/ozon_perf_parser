@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    command: python3 ./Pycharm/Parser.py
+    environment:
+      TZ: Europe/Moscow
+      ECOMRU_PG_DB_NAME: ${ECOMRU_PG_DB_NAME}
+      ECOMRU_PG_HOST: ${ECOMRU_PG_HOST}
+      ECOMRU_PG_PORT: ${ECOMRU_PG_PORT}
+      ECOMRU_PG_USER: ${ECOMRU_PG_USER}
+      ECOMRU_PG_PASSWORD: ${ECOMRU_PG_PASSWORD}
+      ECOMRU_PG_SSL_MODE: ${ECOMRU_PG_SSL_MODE}
+
+    command: sh script.sh
+    

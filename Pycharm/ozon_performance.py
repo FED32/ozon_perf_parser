@@ -881,15 +881,8 @@ class OzonPerformance:
 
 class DbWorking:
     def __init__(self, keys_resp,
-                 db_access="""host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
-                                    port=6432\
-                                    sslmode=verify-full\
-                                    dbname=market_db\
-                                    user=sfedyusnin\
-                                    password=Qazwsx123Qaz\
-                                    target_session_attrs=read-write""",
-                 data_table_name='analitics_data2',
-                 # account_table='account_list'
+                 db_access,
+                 data_table_name='analitics_data2'
                  ):
 
         self.db_access = db_access
@@ -908,16 +901,6 @@ class DbWorking:
         #                             order by client_id_performance"
         self.api_perf_keys_resp = keys_resp
         self.product_list_resp = 'SELECT * FROM product_list'
-
-    # db_access = """host=rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net\
-    #                                    port=6432\
-    #                                    sslmode=verify-full\
-    #                                    dbname=market_db\
-    #                                    user=sfedyusnin\
-    #                                    password=Qazwsx123Qaz\
-    #                                    target_session_attrs=read-write"""
-
-    #         self.db_data = self.get_analitics_data()
 
     def test_db_connection(self):
         """
@@ -939,10 +922,18 @@ class DbWorking:
         """
         Загружает таблицу из базы
         """
+        print('Загружается analitics_data')
         self.db_data = pd.read_sql(self.an_dt_resp, psycopg2.connect(self.db_access))
         print('Загружена analitics_data')
 
-    #         return self.db_data
+    def get_analitics_data2(self, db_params):
+        """
+        Загружает таблицу из базы
+        """
+        print('Загружается analitics_data')
+        engine = create_engine(db_params)
+        self.db_data = pd.read_sql(self.an_dt_resp, con=engine)
+        print('Загружена analitics_data')
 
     def get_last_date(self):
         """
@@ -969,6 +960,19 @@ class DbWorking:
         """
         try:
             df = pd.read_sql(self.api_perf_keys_resp, psycopg2.connect(self.db_access))
+            print('Загружены performance_api_keys')
+            return df
+        except:
+            print('Доступ к таблице запрещен')
+            return None
+
+    def get_perf_keys2(self, db_params):
+        """
+        Загружает ключи performance
+        """
+        try:
+            engine = create_engine(db_params)
+            df = pd.read_sql(self.api_perf_keys_resp, con=engine)
             print('Загружены performance_api_keys')
             return df
         except:
@@ -1159,10 +1163,7 @@ class DbWorking:
                 os.remove(file)
                 print(f'Удаление {file}')
 
-    def upl_to_db(self, dataset,
-                  db_params='postgresql://sfedyusnin:Qazwsx123Qaz@rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net:6432/\
-                  market_db'
-                  ):
+    def upl_to_db(self, dataset, db_params):
         """
         Загружает данные в БД
         Параметры подключения 'postgresql://username:password@localhost:5432/mydatabase'

@@ -9,11 +9,19 @@ from ozon_performance import OzonPerformance
 from ozon_performance import DbWorking
 from threading import Thread
 import sys
+from configparser import ConfigParser
+
+# читаем настройки
+settings = ConfigParser()
+settings.read("settings.ini")
 
 # запись в БД
-send_into_db = True
+send_into_db = int(settings["parser_params"]["send_into_db"])
 # удаление файлов по окончании
-delete_files = True
+delete_files = int(settings["parser_params"]["delete_files"])
+
+print('send_into_db: ', send_into_db)
+print('delete_files: ', delete_files)
 
 # создаем рабочую папку, если еще не создана
 if not os.path.isdir('data'):
@@ -28,8 +36,8 @@ if not os.path.isdir(path_):
     os.mkdir(path_)
 
 # сохранение вывода в файл
-stdoutOrigin = sys.stdout
-sys.stdout = open("./logs/log_" + str(date.today()) + "_py.txt", "w")
+# stdoutOrigin = sys.stdout
+# sys.stdout = open("./logs/log_" + str(date.today()) + "_py.txt", "w")
 
 
 # функция для записи пользовательского лога
@@ -42,16 +50,23 @@ def add_logging(data: str):
 
 
 # параметры доступа к базе данных
-host = 'rc1b-itt1uqz8cxhs0c3d.mdb.yandexcloud.net'
-port = '6432'
-ssl_mode = 'verify-full'
-db_name = 'market_db'
-user = 'sfedyusnin'
-password = 'Qazwsx123Qaz'
-target_session_attrs = 'read-write'
+host = os.environ.get('ECOMRU_PG_HOST', None)
+port = os.environ.get('ECOMRU_PG_PORT', None)
+ssl_mode = os.environ.get('ECOMRU_PG_SSL_MODE', None)
+db_name = os.environ.get('ECOMRU_PG_DB_NAME', None)
+user = os.environ.get('ECOMRU_PG_USER', None)
+password = os.environ.get('ECOMRU_PG_PASSWORD', None)
+target_session_attrs = settings["db_params_1"]["target_session_attrs"]
+# host = settings["db_params_1"]["host"]
+# port = settings["db_params_1"]["port"]
+# ssl_mode = settings["db_params_1"]["ssl_mode"]
+# db_name = settings["db_params_1"]["db_name"]
+# user = settings["db_params_1"]["user"]
+# password = settings["db_params_1"]["password"]
+# target_session_attrs = settings["db_params_1"]["target_session_attrs"]
 
 # таблица с данными
-data_table_name = 'analitics_data2'
+data_table_name = settings["db_params_1"]["data_table_name"]
 
 # sql запрос аккаунтов
 api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
@@ -71,6 +86,8 @@ db_access = f"host={host} " \
             f"password={password} " \
             f"target_session_attrs={target_session_attrs}"
 
+db_params = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
+
 working = DbWorking(db_access=db_access, keys_resp=api_perf_keys_resp, data_table_name=data_table_name)
 connection = working.test_db_connection()
 
@@ -78,13 +95,15 @@ if connection is not None:
     add_logging(data=str(connection))
 
     # загружаем таблицы с данными и ключами
-    working.get_analitics_data()
-    api_keys = working.get_perf_keys()
+    # working.get_analitics_data()
+    working.get_analitics_data2(db_params=db_params)
+    # api_keys = working.get_perf_keys()
+    api_keys = working.get_perf_keys2(db_params=db_params)
 
     # загружаем данные из БД в переменную, загружаем из БД последнюю дату
     db_data = working.db_data
     last_date = str(working.get_last_date())
-    print(last_date)
+    print('Последняя дата ', last_date)
 
     add_logging(data='Количество записей в таблице аккаунтов ' + str(api_keys.shape[0]))
     add_logging(data='Количество записей в таблице статистики ' + str(db_data.shape[0]))
@@ -178,9 +197,8 @@ if len(files) != 0:
     add_logging(data='Готово строк для записи в БД: ' + str(into_db.shape[0]))
     print(into_db)
 
-    if send_into_db is True:
+    if send_into_db == 1:
         # отправляем в БД
-        db_params = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
         try:
             working.upl_to_db(dataset=into_db, db_params=db_params)
             add_logging(data='Запись в БД выполнена')
@@ -192,7 +210,7 @@ if len(files) != 0:
 else:
     add_logging(data='Нет загруженных файлов для обработки')
 
-if delete_files is True:
+if delete_files == 1:
     # удаляем файлы
     try:
         shutil.rmtree(path_)
@@ -203,5 +221,5 @@ if delete_files is True:
 else:
     add_logging(data='Удаление файлов отменено')
 
-sys.stdout.close()
-sys.stdout = stdoutOrigin
+# sys.stdout.close()
+# sys.stdout = stdoutOrigin
