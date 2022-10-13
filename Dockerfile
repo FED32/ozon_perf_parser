@@ -18,10 +18,10 @@ RUN mkdir -p ~/.postgresql && \
     chmod 0600 ~/.postgresql/root.crt
 
 
-RUN apt-get update && apt-get install cron -y
-RUN touch /etc/cron.d/ecomanalistdata
-RUN chmod 0644 /etc/cron.d/ecomanalistdata
-ADD crontab /etc/cron.d/ecomanalistdata
-RUN crontab /etc/cron.d/ecomanalistdata
+#RUN apt-get update && apt-get install cron -y
+#RUN touch /etc/cron.d/ecomanalistdata
+#RUN chmod 0644 /etc/cron.d/ecomanalistdata
+#ADD crontab /etc/cron.d/ecomanalistdata
+#RUN crontab /etc/cron.d/ecomanalistdata
 
 
