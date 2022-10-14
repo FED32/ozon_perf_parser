@@ -14,4 +14,7 @@ services:
       ECOMRU_PG_SSL_MODE: ${ECOMRU_PG_SSL_MODE}
 
     command: sh script.sh
+    volumes:
+            - .:/app/Pycharm/logs
+
     
