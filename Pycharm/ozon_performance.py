@@ -1078,7 +1078,8 @@ class DbWorking:
         data = pd.read_csv(file, sep=';', header=1,
                            skipfooter=1, engine='python'
                            )
-        data = data.dropna(axis=0, how='any', thresh=10)
+        # data = data.dropna(axis=0, how='any', thresh=10)
+        data = data.dropna(axis=0, thresh=10)
         camp = pd.read_csv(file, sep=';', header=0, nrows=0).columns[-1].split(',')[0].split()[-1]
 
         data['api_id'] = api_id
