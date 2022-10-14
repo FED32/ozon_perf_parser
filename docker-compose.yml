@@ -15,6 +15,6 @@ services:
 
     command: sh script.sh
     volumes:
-            - .:/app/Pycharm/logs
+            - ./logs:/app/Pycharm/logs
 
     
