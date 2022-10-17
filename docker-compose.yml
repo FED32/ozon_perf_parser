@@ -3,7 +3,7 @@ version: "3.8"
 services:
   app:
     build: .
-    command: python3 ./Pycharm/Parser.py
+    #command: python3 ./Pycharm/Parser.py
     environment:
       TZ: Europe/Moscow
       ECOMRU_PG_DB_NAME: ${ECOMRU_PG_DB_NAME}
@@ -13,9 +13,14 @@ services:
       ECOMRU_PG_PASSWORD: ${ECOMRU_PG_PASSWORD}
       ECOMRU_PG_SSL_MODE: ${ECOMRU_PG_SSL_MODE}
 
-    command: sh script.sh
+    #command: sh script.sh
     volumes:
             - ./logs:/app/Pycharm/logs
-    command: chown gitlab-runner:gitlab-runner ./logs
+    command: 
+        - /bin/sh
+        #- -c
+        - chown gitlab-runner:gitlab-runner ./logs 
+        - sh script.sh
+
 
     
