@@ -10,10 +10,15 @@ from ozon_performance import DbWorking
 from threading import Thread
 import sys
 from configparser import ConfigParser
+from pathlib import Path
+
+base_path = str(Path('Parser.py').resolve().parent.parent)
+print(base_path)
 
 # читаем настройки
 settings = ConfigParser()
-settings.read("./settings.ini")
+# settings.read("./settings.ini")
+settings.read(base_path + "/Pycharm/settings.ini")
 
 # запись в БД
 send_into_db = int(settings["parser_params"]["send_into_db"])
@@ -24,16 +29,23 @@ print('send_into_db: ', send_into_db)
 print('delete_files: ', delete_files)
 
 # создаем рабочую папку, если еще не создана
-if not os.path.isdir('./data'):
-    os.mkdir('./data')
+# if not os.path.isdir('./data'):
+#     os.mkdir('./data')
+if not os.path.isdir(base_path + '/Pycharm/data'):
+    os.mkdir(base_path + '/Pycharm/data')
 # создаем папку для сохранения отчетов
-if not os.path.isdir('./logs'):
-    os.mkdir('./logs')
+# if not os.path.isdir('./logs'):
+#     os.mkdir('./logs')
+if not os.path.isdir(base_path + '/logs'):
+    os.mkdir(base_path + '/logs')
 
 # путь для сохранения файлов
-path_ = r'./data/{}/'.format(str(date.today()))
+# path_ = r'./data/{}/'.format(str(date.today()))
+path_ = base_path + '/Pycharm/data' + f'/{str(date.today())}'
 if not os.path.isdir(path_):
     os.mkdir(path_)
+
+print('Путь сохранения файлов: ', path_)
 
 # сохранение вывода в файл
 # stdoutOrigin = sys.stdout
