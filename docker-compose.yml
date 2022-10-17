@@ -16,6 +16,6 @@ services:
     command: sh script.sh
     volumes:
             - ./logs:/app/Pycharm/logs
-    commnd: chown gitlab-runner:gitlab-runner logs
+    command: chown gitlab-runner:gitlab-runner logs
 
     
