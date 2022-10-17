@@ -13,7 +13,7 @@ from configparser import ConfigParser
 
 # читаем настройки
 settings = ConfigParser()
-settings.read("settings.ini")
+settings.read("./settings.ini")
 
 # запись в БД
 send_into_db = int(settings["parser_params"]["send_into_db"])
@@ -24,11 +24,11 @@ print('send_into_db: ', send_into_db)
 print('delete_files: ', delete_files)
 
 # создаем рабочую папку, если еще не создана
-if not os.path.isdir('data'):
-    os.mkdir('data')
+if not os.path.isdir('./data'):
+    os.mkdir('./data')
 # создаем папку для сохранения отчетов
-if not os.path.isdir('logs'):
-    os.mkdir('logs')
+if not os.path.isdir('./logs'):
+    os.mkdir('./logs')
 
 # путь для сохранения файлов
 path_ = r'./data/{}/'.format(str(date.today()))
@@ -57,13 +57,9 @@ db_name = os.environ.get('ECOMRU_PG_DB_NAME', None)
 user = os.environ.get('ECOMRU_PG_USER', None)
 password = os.environ.get('ECOMRU_PG_PASSWORD', None)
 target_session_attrs = settings["db_params_1"]["target_session_attrs"]
-# host = settings["db_params_1"]["host"]
-# port = settings["db_params_1"]["port"]
-# ssl_mode = settings["db_params_1"]["ssl_mode"]
-# db_name = settings["db_params_1"]["db_name"]
-# user = settings["db_params_1"]["user"]
-# password = settings["db_params_1"]["password"]
-# target_session_attrs = settings["db_params_1"]["target_session_attrs"]
+
+# print(host)
+# print(port)
 
 # таблица с данными
 data_table_name = settings["db_params_1"]["data_table_name"]
