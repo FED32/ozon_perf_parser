@@ -15,12 +15,13 @@ services:
 
     #command: sh script.sh
     volumes:
-            - ./logs:/app/Pycharm/logs
+        - ./logs:/app/Pycharm/logs
     command: 
         - /bin/sh
-        #- -c
-        - chown gitlab-runner:gitlab-runner ./logs 
-        - sh script.sh
+        - -c
+        - |
+            chown gitlab-runner:gitlab-runner /app/Pycharm/logs 
+            sh script.sh
 
 
     
