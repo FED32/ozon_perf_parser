@@ -2,7 +2,7 @@
 FROM python:3
 
 WORKDIR ./app
-COPY . .
+COPY . ./app
 RUN chmod 775 script.sh
 
 RUN pip install --upgrade pip && pip install --no-cache-dir --upgrade -r requirements.txt
