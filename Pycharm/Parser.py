@@ -20,6 +20,8 @@ settings = ConfigParser()
 # settings.read("./settings.ini")
 settings.read(base_path + "/Pycharm/settings.ini")
 
+print(settings.sections())
+
 # запись в БД
 send_into_db = int(settings["parser_params"]["send_into_db"])
 # удаление файлов по окончании
@@ -55,7 +57,8 @@ print('Путь сохранения файлов: ', path_)
 # функция для записи пользовательского лога
 def add_logging(data: str):
     log_file_name = 'log_' + str(date.today())
-    log_path = './logs/'
+    # log_path = './logs/'
+    log_path = base_path + '/logs/'
     with open(f'{log_path}{log_file_name}.txt', 'a') as f:
         f.write(str(datetime.now()) + ': ')
         f.write(str(data + '\n'))
@@ -120,7 +123,6 @@ if connection is not None:
     # задаем диапазон дат
     date_from = last_date
     date_to = str(date.today())
-
 
     # функция для получения и сохранения отчетов
     def thread_func(*args):
