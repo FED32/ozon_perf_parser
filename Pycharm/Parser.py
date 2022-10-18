@@ -9,23 +9,27 @@ from ozon_performance import OzonPerformance
 from ozon_performance import DbWorking
 from threading import Thread
 import sys
-from configparser import ConfigParser
+# from configparser import ConfigParser
 from pathlib import Path
+
+# print(os.listdir())
 
 base_path = str(Path('Parser.py').resolve().parent.parent)
 print(base_path)
 
 # читаем настройки
-settings = ConfigParser()
+# settings = ConfigParser()
 # settings.read("./settings.ini")
-settings.read(base_path + "/Pycharm/settings.ini")
+# settings.read(base_path + "/Pycharm/settings.ini")
 
-print(settings.sections())
+# print(settings.sections())
 
 # запись в БД
-send_into_db = int(settings["parser_params"]["send_into_db"])
+# send_into_db = int(settings["parser_params"]["send_into_db"])
+send_into_db = 1
 # удаление файлов по окончании
-delete_files = int(settings["parser_params"]["delete_files"])
+# delete_files = int(settings["parser_params"]["delete_files"])
+delete_files = 1
 
 print('send_into_db: ', send_into_db)
 print('delete_files: ', delete_files)
@@ -33,8 +37,8 @@ print('delete_files: ', delete_files)
 # создаем рабочую папку, если еще не создана
 # if not os.path.isdir('./data'):
 #     os.mkdir('./data')
-if not os.path.isdir(base_path + '/Pycharm/data'):
-    os.mkdir(base_path + '/Pycharm/data')
+if not os.path.isdir(base_path + '/data'):
+    os.mkdir(base_path + '/data')
 # создаем папку для сохранения отчетов
 # if not os.path.isdir('./logs'):
 #     os.mkdir('./logs')
@@ -43,7 +47,7 @@ if not os.path.isdir(base_path + '/logs'):
 
 # путь для сохранения файлов
 # path_ = r'./data/{}/'.format(str(date.today()))
-path_ = base_path + '/Pycharm/data' + f'/{str(date.today())}'
+path_ = base_path + '/data' + f'/{str(date.today())}/'
 if not os.path.isdir(path_):
     os.mkdir(path_)
 
@@ -71,13 +75,15 @@ ssl_mode = os.environ.get('ECOMRU_PG_SSL_MODE', None)
 db_name = os.environ.get('ECOMRU_PG_DB_NAME', None)
 user = os.environ.get('ECOMRU_PG_USER', None)
 password = os.environ.get('ECOMRU_PG_PASSWORD', None)
-target_session_attrs = settings["db_params_1"]["target_session_attrs"]
+# target_session_attrs = settings["db_params_1"]["target_session_attrs"]
+target_session_attrs = 'read-write'
 
 # print(host)
 # print(port)
 
 # таблица с данными
-data_table_name = settings["db_params_1"]["data_table_name"]
+# data_table_name = settings["db_params_1"]["data_table_name"]
+data_table_name = 'analitics_data2'
 
 # sql запрос аккаунтов
 api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
