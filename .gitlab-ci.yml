@@ -16,6 +16,6 @@ deploy:
     - ${TAG_NAME}
   script:
   - docker compose down
-  - docker rmi work_ozon_api-app
+  #- docker rmi work_ozon_api-app
   - docker compose up -d
 #
