@@ -880,7 +880,7 @@ class OzonPerformance:
 
 
 class DbWorking:
-    def __init__(self, keys_resp,
+    def __init__(self,
                  db_access,
                  data_table_name='analitics_data2'
                  ):
@@ -892,15 +892,28 @@ class DbWorking:
         self.keys_dt_cols_resp = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'account_list'"
         self.an_dt_resp = f"SELECT * FROM {data_table_name}"
         self.an_dt_cols_resp = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analitics_data2'"
-        # self.api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
-        #                             from (select distinct(client_id_performance) from account_list) as foo\
-        #                             join account_list\
-        #                             on foo.client_id_performance = account_list.client_id_performance\
-        #                             where mp_id = 1\
-        #                             group by foo.client_id_performance, client_secret_performance\
-        #                             order by client_id_performance"
-        self.api_perf_keys_resp = keys_resp
         self.product_list_resp = 'SELECT * FROM product_list'
+        self.api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
+                                    from (select distinct(client_id_performance) from account_list) as foo\
+                                    join account_list\
+                                    on foo.client_id_performance = account_list.client_id_performance\
+                                    where (status_2 = 'Active' or status_1 = 'Active') and mp_id = 1\
+                                    group by foo.client_id_performance, client_secret_performance\
+                                    order by client_id_performance"
+        self.api_perf_keys_resp2 = """
+                    SELECT al.id, asd.attribute_value key_attribute_value, asd2.attribute_value
+                    FROM account_service_data asd
+                    JOIN account_list al ON asd.account_id = al.id
+                    JOIN (SELECT al.mp_id, asd.account_id, asd.attribute_id, asd.attribute_value 
+                    FROM account_service_data asd
+                    JOIN account_list al ON asd.account_id = al.id WHERE al.mp_id = 14) asd2 
+                    ON asd2.mp_id = al.mp_id 
+                    AND asd2.account_id= asd.account_id AND asd2.attribute_id <> asd.attribute_id
+                    WHERE al.mp_id = 14 
+                    AND asd.attribute_id = 9
+                    GROUP BY asd.attribute_id, asd.attribute_value, asd2.attribute_id, asd2.attribute_value, al.id
+                    ORDER BY id
+                    """
 
     def test_db_connection(self):
         """
@@ -972,7 +985,7 @@ class DbWorking:
         """
         try:
             engine = create_engine(db_params)
-            df = pd.read_sql(self.api_perf_keys_resp, con=engine)
+            df = pd.read_sql(self.api_perf_keys_resp2, con=engine)
             print('Загружены performance_api_keys')
             return df
         except:
@@ -1146,9 +1159,8 @@ class DbWorking:
         for col in dataset.columns:
             # print(col, working.db_data[col].dtypes, dataset[col].dtypes)
             if self.db_data[col].dtypes != dataset[col].dtypes:
-                if (self.db_data[col].dtypes == 'float64' or self.db_data[col].dtypes == 'int64') and \
-                        dataset[col].dtypes == 'object':
-                    dataset[col] = dataset[col].str.replace(',', '.')
+                if (self.db_data[col].dtypes == 'float64' or self.db_data[col].dtypes == 'int64') and dataset[col].dtypes == 'object':
+                    dataset[col] = dataset[col].astype(str).str.replace(',', '.')
                     dataset[col] = dataset[col].replace(r'^\s*$', np.nan, regex=True)
                 dataset[col] = dataset[col].astype(self.db_data[col].dtypes)
 

@@ -85,15 +85,6 @@ target_session_attrs = 'read-write'
 # data_table_name = settings["db_params_1"]["data_table_name"]
 data_table_name = 'analitics_data2'
 
-# sql запрос аккаунтов
-api_perf_keys_resp = "select max(id),foo.client_id_performance, client_secret_performance\
-                                    from (select distinct(client_id_performance) from account_list) as foo\
-                                    join account_list\
-                                    on foo.client_id_performance = account_list.client_id_performance\
-                                    where (status_2 = 'Active' or status_1 = 'Active') and mp_id = 1\
-                                    group by foo.client_id_performance, client_secret_performance\
-                                    order by client_id_performance"
-
 # создаем экземпляр класса, проверяем соединение с базой
 db_access = f"host={host} " \
             f"port={port} " \
@@ -105,7 +96,7 @@ db_access = f"host={host} " \
 
 db_params = f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
 
-working = DbWorking(db_access=db_access, keys_resp=api_perf_keys_resp, data_table_name=data_table_name)
+working = DbWorking(db_access=db_access, data_table_name=data_table_name)
 connection = working.test_db_connection()
 
 if connection is not None:
@@ -115,7 +106,7 @@ if connection is not None:
     # working.get_analitics_data()
     working.get_analitics_data2(db_params=db_params)
     # api_keys = working.get_perf_keys()
-    api_keys = working.get_perf_keys2(db_params=db_params)
+    api_keys = working.get_perf_keys2(db_params=db_params).drop_duplicates(subset=['key_attribute_value', 'attribute_value'], keep='first')
 
     # загружаем данные из БД в переменную, загружаем из БД последнюю дату
     db_data = working.db_data
