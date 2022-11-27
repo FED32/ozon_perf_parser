@@ -34,6 +34,7 @@ app.config['SWAGGER'] = {'title': 'API for OZON Performance',
 swagger = Swagger(app)
 app.config.from_object(config.Config)
 
+
 # список кампаний
 @app.route('/ozonperformance/campaigns', methods=['POST'])
 def get_campaigns():
@@ -74,6 +75,7 @@ def get_campaigns():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # список рекламируемых объектов в кампании
 @app.route('/ozonperformance/objects', methods=['POST'])
@@ -119,6 +121,7 @@ def get_objects():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # доступные режимы создания рекламных кампаний
 @app.route('/ozonperformance/available', methods=['POST'])
 def get_obj():
@@ -141,6 +144,7 @@ def get_obj():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # создать кампанию
 @app.route('/ozonperformance/addcamp', methods=['POST'])
@@ -173,6 +177,7 @@ def add_campaign():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # активировать кампанию
 @app.route('/ozonperformance/activate', methods=['POST'])
 def activate_camp():
@@ -196,6 +201,7 @@ def activate_camp():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # деактивировать кампанию
 @app.route('/ozonperformance/deactivate', methods=['POST'])
 def deactivate_camp():
@@ -218,6 +224,7 @@ def deactivate_camp():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # изменить сроки проведения кампании
 @app.route('/ozonperformance/period', methods=['POST'])
@@ -244,6 +251,7 @@ def campaign_period():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # изменить ограничения дневного бюджета кампании
 @app.route('/ozonperformance/budget', methods=['POST'])
 def campaign_budget():
@@ -268,6 +276,7 @@ def campaign_budget():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # создать группу
 @app.route('/ozonperformance/addgroup', methods=['POST'])
@@ -296,6 +305,7 @@ def add_group():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # редактировать группу
 @app.route('/ozonperformance/editgroup', methods=['POST'])
 def edit_group():
@@ -323,6 +333,7 @@ def edit_group():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # добавить товары в кампанию с размещением в карточке товара
 @app.route('/ozonperformance/addcardproducts', methods=['POST'])
@@ -353,6 +364,7 @@ def addcardproducts():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # добавление в кампанию товаров в ранее созданные группы с размещением на страницах каталога и поиска
 @app.route('/ozonperformance/addgroupproducts', methods=['POST'])
 def addgroupproducts():
@@ -382,6 +394,7 @@ def addgroupproducts():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # добавление товара на страницах каталога и поиска — добавление без группы
 @app.route('/ozonperformance/addproduct', methods=['POST'])
@@ -414,6 +427,7 @@ def addproduct():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # обновление ставок товаров с размещением в карточке товара
 @app.route('/ozonperformance/updbidscardproducts', methods=['POST'])
 def updbidscardproducts():
@@ -443,6 +457,7 @@ def updbidscardproducts():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # обновление ставок товаров в группах с размещением на страницах каталога и поиска
 @app.route('/ozonperformance/updbidsgroupproducts', methods=['POST'])
 def updbidsgroupproducts():
@@ -471,6 +486,7 @@ def updbidsgroupproducts():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # обновление ставок товара на страницах каталога и поиска — без группы
 @app.route('/ozonperformance/updbidsproducts', methods=['POST'])
@@ -503,6 +519,7 @@ def updbidsproducts():
     except KeyError:
         return Response("Пустое значение", 400)
 
+
 # список товаров кампании
 @app.route('/ozonperformance/prodlist', methods=['POST'])
 def prodlist():
@@ -526,6 +543,7 @@ def prodlist():
         return Response("Пустое значение", 400)
     except KeyError:
         return Response("Пустое значение", 400)
+
 
 # удалить товары из кампании
 @app.route('/ozonperformance/delproducts', methods=['POST'])

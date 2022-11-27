@@ -11,6 +11,7 @@ from threading import Thread
 import sys
 # from configparser import ConfigParser
 from pathlib import Path
+from data_logging import add_logging
 
 # print(os.listdir())
 
@@ -25,29 +26,30 @@ print(base_path)
 # print(settings.sections())
 
 # запись в БД
-# send_into_db = int(settings["parser_params"]["send_into_db"])
 send_into_db = 1
 # удаление файлов по окончании
-# delete_files = int(settings["parser_params"]["delete_files"])
 delete_files = 1
 
 print('send_into_db: ', send_into_db)
 print('delete_files: ', delete_files)
 
+data_folder = base_path + '/data'
+logs_folder = base_path + '/logs'
+
 # создаем рабочую папку, если еще не создана
 # if not os.path.isdir('./data'):
 #     os.mkdir('./data')
-if not os.path.isdir(base_path + '/data'):
-    os.mkdir(base_path + '/data')
+if not os.path.isdir(data_folder):
+    os.mkdir(data_folder)
 # создаем папку для сохранения отчетов
 # if not os.path.isdir('./logs'):
 #     os.mkdir('./logs')
-if not os.path.isdir(base_path + '/logs'):
-    os.mkdir(base_path + '/logs')
+if not os.path.isdir(logs_folder):
+    os.mkdir(logs_folder)
 
 # путь для сохранения файлов
 # path_ = r'./data/{}/'.format(str(date.today()))
-path_ = base_path + '/data' + f'/{str(date.today())}/'
+path_ = data_folder + f'/{str(date.today())}/'
 if not os.path.isdir(path_):
     os.mkdir(path_)
 
@@ -59,13 +61,13 @@ print('Путь сохранения файлов: ', path_)
 
 
 # функция для записи пользовательского лога
-def add_logging(data: str):
-    log_file_name = 'log_' + str(date.today())
-    # log_path = './logs/'
-    log_path = base_path + '/logs/'
-    with open(f'{log_path}{log_file_name}.txt', 'a') as f:
-        f.write(str(datetime.now()) + ': ')
-        f.write(str(data + '\n'))
+# def add_logging(data: str):
+#     log_file_name = 'log_' + str(date.today())
+#     # log_path = './logs/'
+#     log_path = base_path + '/logs/'
+#     with open(f'{log_path}{log_file_name}.txt', 'a') as f:
+#         f.write(str(datetime.now()) + ': ')
+#         f.write(str(data + '\n'))
 
 
 # параметры доступа к базе данных
@@ -100,7 +102,7 @@ working = DbWorking(db_access=db_access, data_table_name=data_table_name)
 connection = working.test_db_connection()
 
 if connection is not None:
-    add_logging(data=str(connection))
+    add_logging(logs_folder, data=str(connection))
 
     # загружаем таблицы с данными и ключами
     # working.get_analitics_data()
@@ -113,9 +115,9 @@ if connection is not None:
     last_date = str(working.get_last_date())
     print('Последняя дата ', last_date)
 
-    add_logging(data='Количество записей в таблице аккаунтов ' + str(api_keys.shape[0]))
-    add_logging(data='Количество записей в таблице статистики ' + str(db_data.shape[0]))
-    add_logging(data='Дата последней записи в таблице статистики ' + str(last_date))
+    add_logging(logs_folder, data='Количество записей в таблице аккаунтов ' + str(api_keys.shape[0]))
+    add_logging(logs_folder, data='Количество записей в таблице статистики ' + str(db_data.shape[0]))
+    add_logging(logs_folder, data='Дата последней записи в таблице статистики ' + str(last_date))
 
     # задаем диапазон дат
     date_from = last_date
@@ -123,21 +125,21 @@ if connection is not None:
 
     # функция для получения и сохранения отчетов
     def thread_func(*args):
-        ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=5, camp_lim=5)
+        ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=10, camp_lim=7)
         if ozon.auth:
-            add_logging(data=f'Авторизация аккаунта id {args[0]} успешно')
+            add_logging(logs_folder, data=f'Авторизация аккаунта id {args[0]} успешно')
             ozon.collect_data(date_from=date_from, date_to=date_to,
                               statistics=True, phrases=False, attribution=False, media=False, product=False,
                               daily=False, traffic=False)
             rep_ok = len([item for item in ozon.st_camp if item is not None])
             rep_lost = len([item for item in ozon.st_camp if item is None])
-            add_logging(data=f'Аккаунт id {args[0]}, отчетов получено: {rep_ok}')
-            add_logging(data=f'Аккаунт id {args[0]}, отчетов отказано: {rep_lost}')
+            add_logging(logs_folder, data=f'Аккаунт id {args[0]}, отчетов получено: {rep_ok}')
+            add_logging(logs_folder, data=f'Аккаунт id {args[0]}, отчетов отказано: {rep_lost}')
             ozon.save_data(path_=path_,
                            statistics=True, phrases=False, attribution=False, media=False, product=False,
                            daily=False, traffic=False)
         else:
-            add_logging(data=f'Авторизация аккаунта id {args[0]} не удалась')
+            add_logging(logs_folder, data=f'Авторизация аккаунта id {args[0]} не удалась')
 
 
     # создаем отдельные потоки по каждому аккаунту
@@ -160,7 +162,7 @@ if connection is not None:
         thread.join()
 
 else:
-    add_logging(data='Нет подключения к БД')
+    add_logging(logs_folder, data='Нет подключения к БД')
 
 # проверяем наличие загруженных файлов
 files = []
@@ -173,7 +175,7 @@ if len(files) != 0:
     # создаем датасет на основе загруженных по API данных
     # dataset = working.make_dataset(path_=path_)
     dataset = working.make_dataset2(path_=path_)
-    add_logging(data='Количество сырых строк ' + str(dataset.shape[0]))
+    add_logging(logs_folder, data='Количество сырых строк ' + str(dataset.shape[0]))
     # обработаем пропуски
     dataset = dataset.fillna('nan')
     db_data = db_data.fillna('nan')
@@ -201,32 +203,32 @@ if len(files) != 0:
     print('into_db', into_db.shape)
 
     into_db.to_csv(path_ + 'into_db.csv', sep=';', index=False)
-    add_logging(data='Готово строк для записи в БД: ' + str(into_db.shape[0]))
+    add_logging(logs_folder, data='Готово строк для записи в БД: ' + str(into_db.shape[0]))
     print(into_db)
 
     if send_into_db == 1:
         # отправляем в БД
         try:
             working.upl_to_db(dataset=into_db, db_params=db_params)
-            add_logging(data='Запись в БД выполнена')
+            add_logging(logs_folder, data='Запись в БД выполнена')
         except:
-            add_logging(data='Запись в БД не удалась')
+            add_logging(logs_folder, data='Запись в БД не удалась')
     else:
-        add_logging(data='Запись в БД отключена')
+        add_logging(logs_folder, data='Запись в БД отключена')
 
 else:
-    add_logging(data='Нет загруженных файлов для обработки')
+    add_logging(logs_folder, data='Нет загруженных файлов для обработки')
 
 if delete_files == 1:
     # удаляем файлы
     try:
         shutil.rmtree(path_)
-        add_logging(data='Файлы удалены')
+        add_logging(logs_folder, data='Файлы удалены')
     except OSError as e:
         print("Error: %s - %s." % (e.filename, e.strerror))
-        add_logging(data='Ошибка при удалении файлов')
+        add_logging(logs_folder, data='Ошибка при удалении файлов')
 else:
-    add_logging(data='Удаление файлов отменено')
+    add_logging(logs_folder, data='Удаление файлов отменено')
 
 # sys.stdout.close()
 # sys.stdout = stdoutOrigin

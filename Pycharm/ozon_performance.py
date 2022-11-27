@@ -31,9 +31,7 @@ class OzonPerformance:
                         'traffic': 'https://performance.ozon.ru:443/api/client/vendors/statistics'}
         self.day_lim = day_lim
         self.camp_lim = camp_lim
-        #         self.date_to = str(date.today())
-        #         self.date_to = '2022-06-28'
-        #         self.date_from = '2022-07-01'
+
         try:
             self.auth = self.get_token()
         except:
@@ -992,7 +990,8 @@ class DbWorking:
             print('Доступ к таблице запрещен')
             return None
 
-    def extract_zips(self, path_, rem=False):
+    @staticmethod
+    def extract_zips(path_, rem=False):
         """
         Распаковывает все zip в папках statistics папок аккаунтов
         """
@@ -1132,7 +1131,8 @@ class DbWorking:
                              'Стоимость, руб.': 'revenue',
                              'Расход (руб., с НДС)': 'expense',
                              'Расход, руб.': 'expense',
-                             'Unnamed: 1': 'empty'
+                             'Unnamed: 1': 'empty',
+                             'Средняя ставка за клик (руб.)': 'cpc'
                              }, inplace=True)
 
         data['data'] = data['data'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y').date())
@@ -1166,7 +1166,8 @@ class DbWorking:
 
         return dataset
 
-    def rem_csv(self, path_):
+    @staticmethod
+    def rem_csv(path_):
         """
         Удаляет файлы
         """
@@ -1196,3 +1197,90 @@ class DbWorking:
             return df
         except:
             print('Доступ к таблице запрещен')
+
+    @staticmethod
+    def get_data_by_response(sql_resp, db_params):
+        """
+        Загружает таблицу по SQL-запросу
+        """
+        engine = create_engine(db_params)
+        try:
+            print('Загружается таблица')
+            data = pd.read_sql(sql_resp, con=engine)
+            print('Загружена таблица по SQL-запросу')
+            return data
+        except:
+            print('Произошла непредвиденная ошибка')
+            return None
+
+    def get_analitics_data_head(self, db_params):
+        """
+        Загружает таблицу из базы
+        """
+        query = f"SELECT * FROM analitics_data2 LIMIT 100"
+        print('Загружается analitics_data')
+        engine = create_engine(db_params)
+        self.db_data = pd.read_sql(query, con=engine)
+        print('Загружено 100 строк analitics_data')
+
+    def add_new_access_data(self,
+                            ecom_client_id: int,
+                            name: str,
+                            client_id: str,
+                            client_secret: str,
+                            ozon_perf_mp_id=14,
+                            ozon_perf_client_id_attribute_id=9,
+                            ozon_perf_client_secret_attribute_id=8,
+                            status='Active'):
+        """
+        Добавляет в базу новые данные для доступа к ozon performance для пользователя
+        """
+        add_to_acc_list_query = f"INSERT INTO account_list (mp_id, client_id, status_1, name) " \
+                                f"VALUES ({ozon_perf_mp_id}, {ecom_client_id}, '{status}', '{name}')"
+
+        id_query = f"SELECT id FROM account_list " \
+                   f"WHERE client_id = {ecom_client_id} AND mp_id = {ozon_perf_mp_id} AND name = '{name}'"
+
+        try:
+            conn = psycopg2.connect(self.db_access)
+            q = conn.cursor()
+            q.execute(add_to_acc_list_query)
+            conn.commit()
+            status = q.statusmessage
+            q.close()
+            conn.close()
+        except:
+            print('Нет подключения к БД, или нет доступа на выполнение операции')
+            return None
+
+        if status is not None:
+            try:
+                conn = psycopg2.connect(self.db_access)
+                q = conn.cursor()
+                q.execute(id_query)
+                result = q.fetchall()
+                print(result)
+                conn.close()
+            except:
+                print('Нет подключения к БД, или нет доступа на выполнение операции')
+                return None
+
+            if result is not None:
+                id_ = result[0][0]
+
+                add_to_acc_service_data_query = f"INSERT INTO account_service_data (account_id, attribute_id, " \
+                                                f"attribute_value) " \
+                                                f"VALUES ({id_}, {ozon_perf_client_id_attribute_id}, '{client_id}'), " \
+                                                f"({id_}, {ozon_perf_client_secret_attribute_id}, '{client_secret}')"
+                try:
+                    conn = psycopg2.connect(self.db_access)
+                    q = conn.cursor()
+                    q.execute(add_to_acc_service_data_query)
+                    conn.commit()
+                    # status = q.statusmessage
+                    q.close()
+                    conn.close()
+                    return 'OK'
+                except:
+                    print('Нет подключения к БД, или нет доступа на выполнение операции')
+                    return None
