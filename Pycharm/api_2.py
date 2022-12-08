@@ -64,7 +64,7 @@ def get_campaigns():
     """
     try:
         json_file = request.get_json(force=False)
-        print('aaaa', json_file)
+        # print('aaaa', json_file)
         ozon = OzonPerformance(client_id=json_file["client_id"],
                                client_secret=json_file["client_secret"])
         if ozon.auth is None:
@@ -152,7 +152,7 @@ def add_campaign():
     try:
         json_file = request.get_json(force=False)
         ozon = OzonPerformance(client_id=json_file["client_id"],
-                               client_secret=json_file["client_secret"])
+                               client_secret=jsoлгn_file["client_secret"])
         if ozon.auth is None:
             return jsonify({'error': 'Ошибка авторизации'})
         else:

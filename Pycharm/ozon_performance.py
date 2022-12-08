@@ -139,7 +139,7 @@ class OzonPerformance:
                        t_date_to=None,
                        group_by="DATE",
                        n_attempts=5,
-                       delay=3):
+                       delay=5):
         """
         Возвращает статистику по кампании
 
@@ -172,6 +172,7 @@ class OzonPerformance:
                 time.sleep(delay)
                 response = requests.post(url, headers=head, data=json.dumps(body))
                 print('statistics, статус', response.status_code)
+                print(response.headers)
                 if response.status_code == 200:
                     print('Статистика по кампаниям получена')
                     if len(campaigns) == 1:
@@ -498,7 +499,7 @@ class OzonPerformance:
                 os.mkdir(folder + 'traffic')
             status = ''
             while status != 'OK':
-                time.sleep(1)
+                time.sleep(5)
                 status = self.status_traffic(uuid=self.st_trf)['state']
                 print(status)
             report = self.get_traffic_report(uuid=self.st_trf)
@@ -514,7 +515,7 @@ class OzonPerformance:
                 try:
                     status = ''
                     while status != 'OK':
-                        time.sleep(1)
+                        time.sleep(10)
                         status = self.status_report(uuid=camp[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=camp[0])
@@ -534,7 +535,7 @@ class OzonPerformance:
                         try:
                             status = ''
                             while status != 'OK':
-                                time.sleep(1)
+                                time.sleep(10)
                                 status = self.status_report(uuid=phrases[0]).json()['state']
                                 print(status)
                             report = self.get_report(uuid=phrases[0])
@@ -554,7 +555,7 @@ class OzonPerformance:
                 try:
                     status = ''
                     while status != 'OK':
-                        time.sleep(1)
+                        time.sleep(10)
                         status = self.status_report(uuid=attr[0]).json()['state']
                         print(status)
                     report = self.get_report(uuid=attr[0])
@@ -909,6 +910,7 @@ class DbWorking:
                     AND asd2.account_id= asd.account_id AND asd2.attribute_id <> asd.attribute_id
                     WHERE al.mp_id = 14 
                     AND asd.attribute_id = 9
+                    AND al.status_1 = 'Active'
                     GROUP BY asd.attribute_id, asd.attribute_value, asd2.attribute_id, asd2.attribute_value, al.id
                     ORDER BY id
                     """
@@ -1132,7 +1134,19 @@ class DbWorking:
                              'Расход (руб., с НДС)': 'expense',
                              'Расход, руб.': 'expense',
                              'Unnamed: 1': 'empty',
-                             'Средняя ставка за клик (руб.)': 'cpc'
+                             'Средняя ставка за клик (руб.)': 'cpc',
+                             'Ср. цена 1000 показов, ₽': 'cpm',
+                             'Расход, ₽, с НДС': 'expense',
+                             'Цена товара, ₽': 'price',
+                             'Выручка, ₽': 'revenue',
+                             'Выручка с заказов модели, ₽': 'revenue_model',
+                             'Стоимость, ₽': 'revenue',
+                             'Ставка, ₽': 'search_price_rur',
+                             'Расход, ₽': 'expense',
+                             'Средняя ставка, ₽': 'avrg_bid',
+                             'Расход за минусом бонусов, ₽, с НДС': 'exp_bonus',
+                             'Ср. цена клика, ₽': 'cpc',
+                             'Средняя ставка (руб.)%!(EXTRA string=₽)': 'avrg_bid'
                              }, inplace=True)
 
         data['data'] = data['data'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y').date())

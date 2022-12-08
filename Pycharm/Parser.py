@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 import os
 import glob
 import shutil
@@ -18,13 +19,6 @@ from data_logging import add_logging
 base_path = str(Path('Parser.py').resolve().parent.parent)
 print(base_path)
 
-# читаем настройки
-# settings = ConfigParser()
-# settings.read("./settings.ini")
-# settings.read(base_path + "/Pycharm/settings.ini")
-
-# print(settings.sections())
-
 # запись в БД
 send_into_db = 1
 # удаление файлов по окончании
@@ -37,18 +31,13 @@ data_folder = base_path + '/data'
 logs_folder = base_path + '/logs'
 
 # создаем рабочую папку, если еще не создана
-# if not os.path.isdir('./data'):
-#     os.mkdir('./data')
 if not os.path.isdir(data_folder):
     os.mkdir(data_folder)
 # создаем папку для сохранения отчетов
-# if not os.path.isdir('./logs'):
-#     os.mkdir('./logs')
 if not os.path.isdir(logs_folder):
     os.mkdir(logs_folder)
 
 # путь для сохранения файлов
-# path_ = r'./data/{}/'.format(str(date.today()))
 path_ = data_folder + f'/{str(date.today())}/'
 if not os.path.isdir(path_):
     os.mkdir(path_)
@@ -60,16 +49,6 @@ print('Путь сохранения файлов: ', path_)
 # sys.stdout = open("./logs/log_" + str(date.today()) + "_py.txt", "w")
 
 
-# функция для записи пользовательского лога
-# def add_logging(data: str):
-#     log_file_name = 'log_' + str(date.today())
-#     # log_path = './logs/'
-#     log_path = base_path + '/logs/'
-#     with open(f'{log_path}{log_file_name}.txt', 'a') as f:
-#         f.write(str(datetime.now()) + ': ')
-#         f.write(str(data + '\n'))
-
-
 # параметры доступа к базе данных
 host = os.environ.get('ECOMRU_PG_HOST', None)
 port = os.environ.get('ECOMRU_PG_PORT', None)
@@ -77,15 +56,12 @@ ssl_mode = os.environ.get('ECOMRU_PG_SSL_MODE', None)
 db_name = os.environ.get('ECOMRU_PG_DB_NAME', None)
 user = os.environ.get('ECOMRU_PG_USER', None)
 password = os.environ.get('ECOMRU_PG_PASSWORD', None)
-# target_session_attrs = settings["db_params_1"]["target_session_attrs"]
 target_session_attrs = 'read-write'
+# таблица с данными
+data_table_name = 'analitics_data2'
 
 # print(host)
 # print(port)
-
-# таблица с данными
-# data_table_name = settings["db_params_1"]["data_table_name"]
-data_table_name = 'analitics_data2'
 
 # создаем экземпляр класса, проверяем соединение с базой
 db_access = f"host={host} " \
@@ -112,7 +88,7 @@ if connection is not None:
 
     # загружаем данные из БД в переменную, загружаем из БД последнюю дату
     db_data = working.db_data
-    last_date = str(working.get_last_date())
+    last_date = working.get_last_date()
     print('Последняя дата ', last_date)
 
     add_logging(logs_folder, data='Количество записей в таблице аккаунтов ' + str(api_keys.shape[0]))
@@ -120,12 +96,15 @@ if connection is not None:
     add_logging(logs_folder, data='Дата последней записи в таблице статистики ' + str(last_date))
 
     # задаем диапазон дат
-    date_from = last_date
-    date_to = str(date.today())
+    date_from = str(last_date + timedelta(days=1))
+    date_to = str(date.today() - timedelta(days=1))
+
+    print(f'date_from: {date_from}')
+    print(f'date_to: {date_to}')
 
     # функция для получения и сохранения отчетов
     def thread_func(*args):
-        ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=10, camp_lim=7)
+        ozon = OzonPerformance(account_id=args[0], client_id=args[1], client_secret=args[2], day_lim=14, camp_lim=8)
         if ozon.auth:
             add_logging(logs_folder, data=f'Авторизация аккаунта id {args[0]} успешно')
             ozon.collect_data(date_from=date_from, date_to=date_to,
